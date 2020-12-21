@@ -459,7 +459,7 @@ function Show-Menu
        #Clear-Host
        Write-Host "================ $Title ================"
        Write-Host "Press '1' to Report on Non-Compliant Devices and Settings for a selected Baseline"
-       Write-Host "Press '2' to Reporting on Compliant & Non-Compliant Devices for a selected Baseline"
+       Write-Host "Press '2' to Report on All Devices for a selected Baseline"
        #Write-Host "Press '99' to clear cached connection details"
        Write-Host "Press 'Q' to quit."
         }
