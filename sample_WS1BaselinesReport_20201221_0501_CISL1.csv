@@ -1,0 +1,71 @@
+Device UUID,Device Name,Policy,PolicyPath,Compliance Status
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+a00fd1bc-feb0-4e3f-840b-d7c7646e1b76,EUCOCTO-4BJKH29,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+0e7acf06-05ac-4d38-88c8-8766cb03cbd8,EUCOCTO-0UN7RK6,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+e0311184-055c-46b6-8ccc-b72b83166d65,VMWARE-4NCL5LHB,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+73f96817-3dba-4ab6-9424-6c2da5a2e35c,DESKTOP-H09UO2D,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Accounts: Rename administrator account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Accounts: Limit local account use of blank passwords to console logon only,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Accounts: Guest account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Accounts: Administrator account status,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Account lockout threshold,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Account lockout duration,Computer Configuration/Windows Settings/Security Settings/Account Policies/Account Lockout Policy,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Access this computer from the network,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Access Credential Manager as a trusted caller,Computer Configuration/Windows Settings/Security Settings/Local Policies/User Rights Assignment,NotAvailable
+bfd8348c-d6f9-4d61-a19e-eed3d5715bf5,EUCOCTO-K9AUTPC,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+34fdae3e-a73d-46f6-9c6c-8d1a758aa30a,VMWARE-RPK9232,Accounts: Block Microsoft accounts,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
+4a8b7796-f1d3-4240-96ec-a5fce218c763,EUCOCTO-FJI4SGB,Accounts: Rename guest account,Computer Configuration/Windows Settings/Security Settings/Local Policies/Security Options,NotAvailable
