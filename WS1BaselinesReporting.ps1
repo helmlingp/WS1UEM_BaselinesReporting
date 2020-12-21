@@ -6,7 +6,8 @@
 	  Created by:	    Phil Helmling, @philhelmling
 	  Organization:   VMware, Inc.
     Filename:       WS1BaselinesReporting.ps1
-    Requires WS1API.psm1 in the same directory
+    GitHub:         https://github.com/helmlingp/WS1UEM_BaselinesReporting
+    Requires        WS1API.psm1 in the same directory - https://github.com/helmlingp/WS1API
   .DESCRIPTION
     Writes output to Log file and Device Policy setting status to CSV for selected Baseline.
     Log and CSV written to same directory as script.
