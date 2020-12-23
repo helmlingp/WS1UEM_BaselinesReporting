@@ -28,6 +28,7 @@
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
 
 $Debug = $false
+[string]$psver = $PSVersionTable.PSVersion
 
 $current_path = $PSScriptRoot;
 if($PSScriptRoot -eq ""){
@@ -35,17 +36,17 @@ if($PSScriptRoot -eq ""){
     $current_path = "C:\Temp";
 }
 Unblock-File "$current_path\WS1API.psm1"
-Import-Module "$current_path\WS1API.psm1" -ErrorAction Stop -PassThru -Force;
+Import-Module "$current_path\WS1API.psm1" -Scope Local -ErrorAction Stop -PassThru -Force;
 
 #setup Report/Log file
 $DateNow = Get-Date -Format "yyyyMMdd_hhmm";
 $pathfile = "$current_path\WS1BaselinesReport_$DateNow";
-$logLocation = "$pathfile.log";
+$Script:logLocation = "$pathfile.log";
 $Script:Path = $logLocation;
-
-$Script:Path
-
-if ($Debug){"LogLocation: $logLocation"}
+if($Debug){
+  write-host "Path: $Path"
+  write-host "LogLocation: $LogLocation"
+}
 
 Write-2Report -Path $Script:Path -Message "WS1 Baseline Report" -Level "Title"
 
@@ -59,7 +60,6 @@ Function setupServerAuth {
       $script:ApiKey = 'Groups & Settings > All Settings > System > Advanced > API > Rest API'
       $script:OrgGroup = 'OGNAME'
     }else{
-
       $script:WSOServer = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
       $private:Username = Read-Host -Prompt 'Enter the Username'
       $private:Password = Read-Host -Prompt 'Enter the Password' -AsSecureString
@@ -67,7 +67,14 @@ Function setupServerAuth {
       $script:OrgGroup = Read-Host -Prompt 'Enter the Organizational Group Name'
 
       #Convert the Password
-      $private:UnsecurePassword = ConvertFrom-SecureString -SecureString $private:Password -AsPlainText
+      if($psver -lt 7){
+        #Powershell 6 or below
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($private:Password)
+        $private:UnsecurePassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+      } else {
+        #Powershell 7 or above
+        $private:UnsecurePassword = ConvertFrom-SecureString -SecureString $private:Password -AsPlainText
+      }
     }
     #Base64 Encode AW Username and Password
     $private:combined = $private:Username + ":" + $private:UnsecurePassword
@@ -482,6 +489,10 @@ do
           alldevices
         }
     
+    'Q' {
+          Remove-Module WS1API
+        }
+
     #'99' {
     #      clearcache
     #    }
