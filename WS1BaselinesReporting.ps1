@@ -20,9 +20,25 @@
     - Organizational Group Name (will search using beginning of name not case sensitive)
     
   .EXAMPLE
+    Provide connection parameters on command line
+    powershell.exe -ep bypass -file .\WS1BaselinesReporting.ps1 -username USERNAME -password PASSWORD -Server DESTINATION_SERVER_URL -OGName DESTINATION_OG_NAME -ApiKey RESTAPIKEY
+
+    Prompt for connection parameters 
     powershell.exe -ep bypass -file .\WS1BaselinesReporting.ps1
 
 #>
+param (
+    [Parameter(Mandatory=$false)]
+    [string]$username=$script:Username,
+    [Parameter(Mandatory=$false)]
+    [string]$password=$script:password,
+    [Parameter(Mandatory=$false)]
+    [string]$OGName=$script:OGName,
+    [Parameter(Mandatory=$false)]
+    [string]$Server=$script:Server,
+    [Parameter(Mandatory=$false)]
+    [string]$ApiKey=$script:ApiKey
+)
 #----------------------------------------------------------[Declarations]----------------------------------------------------------
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
@@ -52,54 +68,56 @@ Write-2Report -Path $Script:Path -Message "WS1 Baseline Report" -Level "Title"
 
 Function setupServerAuth {
 
-  if ([string]::IsNullOrEmpty($script:WSOServer)){
+  if ([string]::IsNullOrEmpty($script:Server)){
     if ($Debug){
-      $script:WSOServer = "https://asXXX.awmdm.com"
+      $script:Server = "https://asXXX.awmdm.com"
       $script:Username = 'username'
-      $script:UnsecurePassword = 'password'
+      $script:Password = 'password'
       $script:ApiKey = 'Groups & Settings > All Settings > System > Advanced > API > Rest API'
-      $script:OrgGroup = 'OGNAME'
+      $script:OGName = 'OGNAME'
     }else{
-      $script:WSOServer = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
-      $private:Username = Read-Host -Prompt 'Enter the Username'
-      $private:Password = Read-Host -Prompt 'Enter the Password' -AsSecureString
+      $script:Server = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
+      $script:Username = Read-Host -Prompt 'Enter the Username'
+      $script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
       $script:ApiKey = Read-Host -Prompt 'Enter the API Key'
-      $script:OrgGroup = Read-Host -Prompt 'Enter the Organizational Group Name'
-
+      $script:OGName = Read-Host -Prompt 'Enter the Organizational Group Name'
+    
       #Convert the Password
       if($psver -lt 7){
         #Powershell 6 or below
-        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($private:Password)
-        $private:UnsecurePassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($script:SecurePassword)
+        $script:Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
       } else {
         #Powershell 7 or above
-        $private:UnsecurePassword = ConvertFrom-SecureString -SecureString $private:Password -AsPlainText
+        $script:Password = ConvertFrom-SecureString -SecureString $private:SecurePassword -AsPlainText
       }
     }
-    #Base64 Encode AW Username and Password
-    $private:combined = $private:Username + ":" + $private:UnsecurePassword
-    $private:encoding = [System.Text.Encoding]::ASCII.GetBytes($private:combined)
-    $private:encoded = [Convert]::ToBase64String($private:encoding)
-    $script:cred = "Basic $private:encoded"
+  }
 
-    if($Debug){ 
-      Write-host `n"Calling setupServerAuth" 
-      write-host "WS1 Host: $script:WSOServer"
-      write-host "Base64 creds: $script:cred"
-      write-host "APIKey: $script:apikey"
-      write-host "OG Name: $script:OrgGroup"
-    }
 
-    $OGSearch = Get-OG -WSOServer $script:WSOServer -Cred $script:cred -ApiKey $script:ApiKey -OrgGroup $script:OrgGroup -Debug $Debug
-    $script:groupuuid = $OGSearch.OrganizationGroups[0].Uuid;
-    if($Debug){ 
-      write-host "GroupUUID: $script:groupuuid"
-    }
+  #Base64 Encode AW Username and Password
+  $private:combined = $script:Username + ":" + $script:Password
+  $private:encoding = [System.Text.Encoding]::ASCII.GetBytes($private:combined)
+  $private:encoded = [Convert]::ToBase64String($private:encoding)
+  $script:cred = "Basic $private:encoded"
+
+  if($Debug){ 
+    Write-host `n"Calling setupServerAuth" 
+    write-host "WS1 Host: $script:Server"
+    write-host "Base64 creds: $script:cred"
+    write-host "APIKey: $script:apikey"
+    write-host "OG Name: $script:OGName"
+  }
+
+  $OGSearch = Get-OG -Server $script:Server -Cred $script:cred -ApiKey $script:ApiKey -OrgGroup $script:OGName -Debug $Debug
+  $script:groupuuid = $OGSearch.OrganizationGroups[0].Uuid;
+  if($Debug){ 
+    write-host "GroupUUID: $script:groupuuid"
   }
 }
 
 Function getBaselineList {
-  $APIEndpoint = "$script:WSOServer/api/mdm/groups/$script:groupuuid/baselines";
+  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines";
   $ApiVersion = "1"
   $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
 
@@ -109,7 +127,7 @@ Function getBaselineList {
 
 Function getDevicesinBaseline {
   param([string]$baselineUUID)
-  $APIEndpoint = "$WSOServer/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices";
+  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices";
   $ApiVersion = "1"
   $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
 
@@ -119,7 +137,7 @@ Function getDevicesinBaseline {
 
 Function getDevicePolicies {
   param([string]$baselineUUID, [string]$deviceUUID)
-  $APIEndpoint = "$WSOServer/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices/$deviceUUID/policies";
+  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices/$deviceUUID/policies";
   $ApiVersion = "1"
   $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
 
@@ -128,7 +146,7 @@ Function getDevicePolicies {
 
 Function getBaselineAssignments {
   param([string]$baselineUUID)
-  $APIEndpoint = "$WSOServer/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/assignments";
+  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/assignments";
   $ApiVersion = "2"
   $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
 
@@ -138,7 +156,7 @@ Function getBaselineAssignments {
 
 Function getBaselineSummary {
   param([string]$baselineUUID)
-  $APIEndpoint = "$WSOServer/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID`?customizations=true&summary=true";
+  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID`?customizations=true&summary=true";
   $ApiVersion = "1"
   $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
 
@@ -245,10 +263,12 @@ function noncompliantdevices {
 
   ##Get Baseline Assignments
   $BaselineAssignment = getBaselineAssignments -baselineUUID $BaselineUUID
-  $strBaselineAssignments = $BaselineAssignment | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
-  Write-2Report -Path $Script:Path -Message "Baseline Selected is assigned" -Level "Header"
+  $strBaselineAssignments = $BaselineAssignment | Select-Object -ExpandProperty assigned_smart_groups | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
+  Write-2Report -Path $Script:Path -Message "Baseline Selected is assigned to the following SmartGroups" -Level "Header"
   Write-2Report -Path $Script:Path -Message $strBaselineAssignments -Level "Body"
-  Write-2Report -Path $Script:Path -Message "Note:Exclusions available in 2101 release" -Level "Body"
+  $strBaselineExclusions = $BaselineAssignment | Select-Object -ExpandProperty excluded_smart_groups | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
+  Write-2Report -Path $Script:Path -Message "Baseline Selected is excluded from the following SmartGroups" -Level "Header"
+  Write-2Report -Path $Script:Path -Message $strBaselineExclusions -Level "Body"
 
   ##Get devices in Baseline
   $DevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID
@@ -402,10 +422,12 @@ function alldevices {
 
   ##Get Baseline Assignments
   $BaselineAssignment = getBaselineAssignments -baselineUUID $BaselineUUID
-  $strBaselineAssignments = $BaselineAssignment | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
-  Write-2Report -Path $Script:Path -Message "Baseline Selected is assigned" -Level "Header"
+  $strBaselineAssignments = $BaselineAssignment | Select-Object -ExpandProperty assigned_smart_groups | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
+  Write-2Report -Path $Script:Path -Message "Baseline Selected is assigned to the following SmartGroups" -Level "Header"
   Write-2Report -Path $Script:Path -Message $strBaselineAssignments -Level "Body"
-  Write-2Report -Path $Script:Path -Message "Note:Exclusions available in 2101 release" -Level "Body"
+  $strBaselineExclusions = $BaselineAssignment | Select-Object -ExpandProperty excluded_smart_groups | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
+  Write-2Report -Path $Script:Path -Message "Baseline Selected is excluded from the following SmartGroups" -Level "Header"
+  Write-2Report -Path $Script:Path -Message $strBaselineExclusions -Level "Body"
 
   ##Get devices in Baseline
   $DevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID
