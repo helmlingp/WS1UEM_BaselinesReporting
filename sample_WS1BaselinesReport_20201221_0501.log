@@ -55,12 +55,15 @@ Disable context menus in the Start Menu                    User Configuration/Ad
 Prevent addition of printers                               User Configuration/Administrative Templates/Control Panel/Printers Enabled
 
 
-Baseline Selected is assigned
+Baseline Selected is assigned to the following SmartGroups
 
-SmartGroup
-----------
+SmartGroup                            
+----------                            
+LOB SG(EUC Office of the CTO)
 
 
+
+Baseline Selected is excluded from the following SmartGroups
 
 Note:Exclusions available in 2101 release
 Non-Compliant, Intermediate & NotAvailable devices in CISL1 Baseline
