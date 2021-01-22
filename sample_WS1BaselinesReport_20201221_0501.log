@@ -60,13 +60,17 @@ Baseline Selected is assigned to the following SmartGroups
 SmartGroup                            
 ----------                            
 LOB SG(EUC Office of the CTO)
-
+LOB3 SG(LOB3)
 
 
 Baseline Selected is excluded from the following SmartGroups
 
-Note:Exclusions available in 2101 release
-Non-Compliant, Intermediate & NotAvailable devices in CISL1 Baseline
+SmartGroup
+----------
+LOB2 SG(LOB2)
+LOB4 SG(LOB4)
+
+NonCompliant,Intermediate,NotAvailable devices in BCM Baseline
 
 Device Name     userName                Install Status    Baseline Version Compliance Status
 -----------     --------                --------------    ---------------- -----------------
@@ -78,6 +82,7 @@ EUCOCTO-K9AUTPC fulcrum.local\philtest1 PENDING_INSTALL                  4 NotAv
 VMWARE-RPK9232 fulcrum.local\philtest1 PENDING_INSTALL                  4 NotAvailable
 VMWARE-4NCL5LHB fulcrum.local\philtest1 PENDING_INSTALL                  4 NotAvailable
 
+Settings with NonCompliant,Intermediate for devices with BCM Baseline Installed
 
 
 Device UUID                          Device Name     Policy                                                                     PolicyPath                                                                                        Compliance Status
