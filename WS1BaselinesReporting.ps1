@@ -342,6 +342,7 @@ function report {
   $status = "CONFIRMED_INSTALL"
   $compliance_level = "NonCompliant,Intermediate"
   Write-2Report -Path $Script:Path -Message "Settings with $compliance_level for devices with $BaselineName Baseline Installed" -Level "Header"
+  Write-2Report -Path $Script:Path -Message "Please wait this process can take quite some time...." -Level "Header"
   $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
   $selectedDevicesinBaseline = $selectDevicesinBaseline.results
   #Could reuse existing and filter, but a lot of processing on the endpoint. Might be better than on the API server. Need to filter status for CONFIRMED_INSTALL also
