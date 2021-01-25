@@ -340,7 +340,7 @@ function report {
 
   #Report on devices that have the baseline installed, but are non-compliant or partially compliant (Intermediate) and report on individual setting compliance
   $status = "CONFIRMED_INSTALL"
-  $compliance_level = "NonCompliant,Intermediate"
+  $compliance_level = "NonCompliant,Intermediate,NotAvailable"
   Write-2Report -Path $Script:Path -Message "Settings with $compliance_level for devices with $BaselineName Baseline Installed" -Level "Header"
   Write-2Report -Path $Script:Path -Message "Please wait this process can take quite some time...." -Level "Header"
   $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
@@ -354,7 +354,7 @@ function report {
     $DeviceUUID = $device.deviceUUID
     $DeviceName = $device.friendlyName
 
-    $compliance_level = "NonCompliant,NotAvailable"
+    $compliance_level = "NonCompliant,Intermediate,NotAvailable"
     $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 100 -compliance_level $compliance_level
     foreach ($policy in $DevicePolicies){
 
