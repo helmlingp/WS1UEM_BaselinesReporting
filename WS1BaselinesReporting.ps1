@@ -295,9 +295,9 @@ function report {
   Write-2Report -Path $Script:Path -Message "Assignment Count: $BaselineAssignmentCount" -Level "Body"
   
   $BaselineSummary = getBaselineSummary -baselineUUID $BaselineUUID
-  $vendortemplateUUID = $BaselineSummary.vendorTemplateUUID
-  $OSVersionUUID = $BaselineSummary.osVersionUUID
-  $securityLevelUUID = $BaselineSummary.securityLevelUUID
+  #$vendortemplateUUID = $BaselineSummary.vendorTemplateUUID
+  #$OSVersionUUID = $BaselineSummary.osVersionUUID
+  #$securityLevelUUID = $BaselineSummary.securityLevelUUID
 
   $installsummaryproperties = @(
     @{N="Status";E={$_.status}},
@@ -361,7 +361,7 @@ function report {
     Write-2Report -Path $Script:Path -Message $strBaselineExclusions -Level "Body"
   }
 
-  ##Get Baseline Template Details to be searched for each setting
+  ##Get Baseline Template Details to be searched for each setting - NOT USED
   #$BaselineTemplateDetail = getBaselineTemplateDetail -vendortemplateUUID $vendortemplateUUID -OSVersionUUID $OSVersionUUID -securityLevelUUID $securityLevelUUID
 
   ##Report on devices in Baseline
@@ -382,28 +382,82 @@ function report {
   $strDevicesinBaseline = $selectedDevicesinBaseline  | Select-Object -Property $deviceproperties | Sort-Object "Device Name" | Format-Table -AutoSize | Out-String
   Write-2Report -Path $Script:Path -Message $strDevicesinBaseline -Level "Body"
 
+  ##Export this list to CSV?
+  $csvLocation = $pathfile+"_Device_Compliance_Status_"+$BaselineName+".csv"
+  $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device Name"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
+
   ##Report on devices that have the baseline installed, but are non-compliant or partially compliant (Intermediate) and report on individual setting compliance
-  $status = "CONFIRMED_INSTALL,PENDING_REBOOT"
-  #$compliance_level = "NonCompliant,Intermediate"
-  $compliance_level = "NonCompliant,Intermediate,NotAvailable"
+  #$status = "CONFIRMED_INSTALL,PENDING_REBOOT"
+  #$compliance_level = "NonCompliant,Intermediate,NotAvailable"
+  $compliance_level = "NonCompliant,Intermediate"
   Write-2Report -Path $Script:Path -Message "Settings with $compliance_level for devices with $BaselineName Baseline Installed" -Level "Header"
   Write-host "Please wait this process can take quite some time...."
   $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
   $selectedDevicesinBaseline = $selectDevicesinBaseline.results
+  $selectedDevicesinBaselinetotal = $selectDevicesinBaseline.total
   #Could reuse existing and filter, but a lot of processing on the endpoint. Might be better than on the API server. Need to filter status for CONFIRMED_INSTALL also
   #$selectedDevicesinBaseline = $selectDevicesinBaseline | Where-Object {$_.compliance.status -eq "Non-Compliant" -or $_.compliance.status -eq "Intermediate"}
-  
-  #add customisation or policy setting to the array
-  #$strBaselineSummaryCustomizations = $BaselineSummary | Select-Object -ExpandProperty customizations | Select-Object -Property $customizationssummaryproperties | Sort-Object -Property "Name" | Format-Table -AutoSize | Out-String
-  #$strBaselineSummaryPolicies = $BaselineSummary | Select-Object -ExpandProperty policies | Select-Object -Property $policysummaryproperties | Sort-Object -Property "Name" | Format-Table -AutoSize | Out-String
 
   ##Create array to store Device UUID and Name
-  $devicepoliciesarray = @()
-  foreach ($device in $selectedDevicesinBaseline){
+  $devicepoliciesarray = @();
+  $batch = 100;
+  $compliance_level = "NonCompliant";
+  #$compliance_level = "NonCompliant,NotAvailable"
+
+  for (($i = 0),($count = 1),($k = 1); $i -lt $selectedDevicesinBaselinetotal; $i += $batch) {
+      if (($selectedDevicesinBaselinetotal - $i) -gt 1  ) {
+          $myTmpObj = $selectedDevicesinBaseline[$i..($i + 1)]
+          foreach ($device in $myTmpObj) {
+            $DeviceUUID = $device.deviceUUID
+            $DeviceName = $device.friendlyName
+            
+            $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
+            foreach ($policy in $DevicePolicies){
+              $PSObject = New-Object PSObject -Property @{
+                DeviceUUID = $DeviceUUID
+                DeviceName = $DeviceName
+                Policy=$policy.name
+                PolicyPath=$policy.path
+                PolicyStatus=$policy.status
+                ComplianceStatus=$policy.compliance.status
+              }
+              $devicepoliciesarray += $PSObject
+            }
+          }
+          $count++
+          $k++
+          sleep 10
+      }
+      else {
+          $myTmpObj = $selectedDevicesinBaseline[$i..($selectDevicesinBaseline.Total - 1)]
+          #write-host "Last Batch $k"
+          foreach ($device in $myTmpObj) {
+            $DeviceUUID = $device.deviceUUID
+            $DeviceName = $device.friendlyName
+        
+            $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
+            foreach ($policy in $DevicePolicies){
+              $PSObject = New-Object PSObject -Property @{
+                DeviceUUID = $DeviceUUID
+                DeviceName = $DeviceName
+                Policy=$policy.name
+                PolicyPath=$policy.path
+                PolicyStatus=$policy.status
+                ComplianceStatus=$policy.compliance.status
+              }
+              $devicepoliciesarray += $PSObject
+            }
+          }
+          $count++
+          $k++
+      }
+  }
+<#   foreach ($device in $selectedDevicesinBaseline){
     $DeviceUUID = $device.deviceUUID
     $DeviceName = $device.friendlyName
 
-    $compliance_level = "NonCompliant,NotAvailable"
+    #$compliance_level = "NonCompliant,NotAvailable"
+    $compliance_level = "NonCompliant"
     $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
     foreach ($policy in $DevicePolicies){
 
@@ -417,7 +471,7 @@ function report {
       }
       $devicepoliciesarray += $PSObject
     }
-  }
+  } #>
 
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
@@ -432,7 +486,7 @@ function report {
   Write-2Report -Path $Script:Path -Message $strdevicepoliciesarray -Level "Body"
 
   ##Export this list to CSV?
-  $csvLocation = $pathfile+"_"+$BaselineName+".csv"
+  $csvLocation = $pathfile+"_Device_NonCompliantControls_"+$BaselineName+".csv"
   $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
   Write-2Report -Path $Script:Path -Message "Completed report on $compliance_level Devices and Settings for $BaselineName Baseline in $BaselineParentOG" -Level "Footer"
