@@ -449,7 +449,7 @@ function report {
   ##Export this list to CSV?
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
-    @{N="Device Name";E={$_.DeviceName}},
+    @{N="Device Name";E={$_.friendlyName}},
     @{N="userName";E={$_.userName}},
     @{N="Install Status";E={$_.status | Select-Object -ExpandProperty status}},
     @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
@@ -457,12 +457,12 @@ function report {
     @{N="Reported On";E={$_.status | Select-Object -ExpandProperty reportedOn}}
   )
   $csvLocation = $pathfile+"_Device_Compliance_Status_"+$BaselineName+".csv"
-  $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device Name"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
+  $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
   ##Report on devices that have the baseline installed, but are non-compliant or partially compliant (Intermediate) and report on individual setting compliance
   #$status = "CONFIRMED_INSTALL,PENDING_REBOOT"
-  #$compliance_level = "NonCompliant,Intermediate,NotAvailable"
-  $compliance_level = "NonCompliant,Intermediate"
+  $compliance_level = "NonCompliant,Intermediate,NotAvailable"
+  #$compliance_level = "NonCompliant,Intermediate"
   Write-2Report -Path $Script:Path -Message "Settings with $compliance_level for devices with $BaselineName Baseline Installed" -Level "Header"
   Write-host "Please wait this process can take quite some time...."
   $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
