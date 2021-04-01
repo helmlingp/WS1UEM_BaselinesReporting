@@ -78,7 +78,7 @@ Function setupServerAuth {
     }else{
       $script:Server = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
       $script:Username = Read-Host -Prompt 'Enter the Username'
-      $script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
+      [string]$script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
       $script:ApiKey = Read-Host -Prompt 'Enter the API Key'
       $script:OGName = Read-Host -Prompt 'Enter the Organizational Group Name'
     
@@ -103,7 +103,7 @@ Function setupServerAuth {
   $script:cred = "Basic $private:encoded"
 
   if($Debug){ 
-    Write-host `n"Calling setupServerAuth" 
+    Write-host `n"Server Auth" 
     write-host "WS1 Host: $script:Server"
     write-host "Base64 creds: $script:cred"
     write-host "APIKey: $script:apikey"
@@ -197,56 +197,26 @@ Function getBaselineTemplateDetail {
 
 }
 
-function noncompliantdevices {
-  #Variables
-  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
-  $compliance_level = "NonCompliant,Intermediate,NotAvailable"
-  
-  #Call Report Function
-  report -status $status -compliance_level $compliance_level
-
-}
-
-function alldevices {
-  #Variables
-  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
-  $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
-  
-  #Call Report Function
-  report -status $status -compliance_level $compliance_level
-
-}
-
-function report {
-  param([string]$status,
-  [string]$compliance_level
-  )
-
-  #Connect details
-  setupServerAuth
+Function OGSearch {
 
   #may be able to check if variable exists before making API call. Will make script quicker
   $OGSearch = Get-OG -Server $script:Server -Cred $script:cred -ApiKey $script:ApiKey -OrgGroup $script:OGName -Debug $Debug
+  if($Debug){ 
+    write-host "OGSearch: $OGSearch"
+  }
   if($Null -eq $OGSearch){
     Write-2Report -Path $Script:Path -Message "Server Authentication or Server Connection Failure`n`n`tExiting" -Level "Error"
     exit
   }else{
     $script:groupuuid = $OGSearch.OrganizationGroups[0].Uuid;
+    $script:OGName = $OGSearch.OrganizationGroups[0].Name
     if($Debug){ 
       write-host "GroupUUID: $script:groupuuid"
     }
   }
-  
-  # Report on Devices and Settings for a selected Baseline
-  write-host "******************************************************************************" -ForegroundColor Cyan
-  write-host "`n Report on $compliance_level and Settings for a selected Baseline in a given OG" -ForegroundColor Cyan
-  write-host "`n******************************************************************************" -ForegroundColor Cyan
-  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
-  
+}
 
-  ##Get a list of Baselines
-  $BaselineList = getBaselineList
-
+Function ChooseBaseline {
   #$ValidChoices = 0..($BaselineList.Count)
   $ValidChoices = 0..($BaselineList.Count -1)
   $ValidChoices += 'Q'
@@ -267,13 +237,13 @@ function report {
         exit
       } else {
         
-        $BaselineName = $BaselineList[$Choice].name
-        $BaselineUUID = $BaselineList[$Choice].baselineUUID
-        $BaselineDescription = $BaselineList[$Choice].description
-        $BaselineTemplate = $BaselineList[$Choice].templateName
-        $BaselineCurrentVersion = $BaselineList[$Choice].version
-        $BaselineParentOG = $BaselineList[$Choice].rootLocationGroupName
-        $BaselineAssignmentCount = $BaselineList[$Choice].assignmentCount
+        $script:BaselineName = $BaselineList[$Choice].name
+        $script:BaselineUUID = $BaselineList[$Choice].baselineUUID
+        $script:BaselineDescription = $BaselineList[$Choice].description
+        $script:BaselineTemplate = $BaselineList[$Choice].templateName
+        $script:BaselineCurrentVersion = $BaselineList[$Choice].version
+        $script:BaselineParentOG = $BaselineList[$Choice].rootLocationGroupName
+        $script:BaselineAssignmentCount = $BaselineList[$Choice].assignmentCount
       }
     } else {
       [console]::Beep(1000, 300)
@@ -284,6 +254,100 @@ function report {
       $Choice = ''
     }
   }
+}
+
+function noncompliantdevices {
+  #Variables
+  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  $compliance_level = "NonCompliant,Intermediate,NotAvailable"
+  
+  #Connect details
+  setupServerAuth
+  #Search OG Name to get OG ID
+  OGSearch
+  
+  # Report on Devices and Settings for a selected Baseline
+  write-host "`n**********************************************************************************" -ForegroundColor Cyan
+  write-host "`n Report on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -ForegroundColor Cyan
+  write-host "`n**********************************************************************************" -ForegroundColor Cyan
+  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
+  
+  ##Get a list of Baselines
+  $BaselineList = getBaselineList
+
+  #Choose a Baseline
+  ChooseBaseline
+
+  #Call Report Function
+  report -status $status -compliance_level $compliance_level
+
+}
+
+function alldevices {
+  #Variables
+  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
+  
+  #Connect details
+  setupServerAuth
+  #Search OG Name to get OG ID
+  OGSearch
+  
+  # Report on Devices and Settings for a selected Baseline
+  write-host "`n**********************************************************************************" -ForegroundColor Cyan
+  write-host "`n Report on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -ForegroundColor Cyan
+  write-host "`n**********************************************************************************" -ForegroundColor Cyan
+  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
+  
+  ##Get a list of Baselines
+  $BaselineList = getBaselineList
+
+  #Choose a Baseline
+  ChooseBaseline
+  
+  #Call Report Function
+  report -status $status -compliance_level $compliance_level
+
+}
+
+function alldevicesallbaselines {
+  #Variables
+  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
+
+  #Connect details
+  setupServerAuth
+  #Search OG Name to get OG ID
+  OGSearch
+  
+  # Report on Devices and Settings for a selected Baseline
+  write-host "************************************************************************************" -ForegroundColor Cyan
+  write-host "`n Report on $compliance_level and Settings for a All Baselines in $script:OGName OG" -ForegroundColor Cyan
+  write-host "`n**********************************************************************************" -ForegroundColor Cyan
+  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
+  
+  ##Get a list of Baselines
+  $BaselineList = getBaselineList
+
+  #Choose a Baseline
+  foreach ($baseline in $BaselineList){
+    $BaselineName = $Baseline.name
+    $BaselineUUID = $Baseline.baselineUUID
+    $BaselineDescription = $Baseline.description
+    $BaselineTemplate = $BaselineList.templateName
+    $BaselineCurrentVersion = $Baseline.version
+    $BaselineParentOG = $Baseline.rootLocationGroupName
+    $BaselineAssignmentCount = $Baseline.assignmentCount
+    
+    #Call Report Function
+    report -status $status -compliance_level $compliance_level
+  }
+}
+
+function report {
+  param([string]$status,
+  [string]$compliance_level
+  )
   
   ##Get Baseline Summary
   Write-2Report -Path $Script:Path -Message "`nSummary Information for Baseline" -Level "Header"
@@ -383,6 +447,15 @@ function report {
   Write-2Report -Path $Script:Path -Message $strDevicesinBaseline -Level "Body"
 
   ##Export this list to CSV?
+  $deviceproperties = @(
+    @{N="Device UUID";E={$_.DeviceUUID}},
+    @{N="Device Name";E={$_.DeviceName}},
+    @{N="userName";E={$_.userName}},
+    @{N="Install Status";E={$_.status | Select-Object -ExpandProperty status}},
+    @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
+    @{N="Compliance Status";E={$_.compliance | Select-Object -ExpandProperty status}},
+    @{N="Reported On";E={$_.status | Select-Object -ExpandProperty reportedOn}}
+  )
   $csvLocation = $pathfile+"_Device_Compliance_Status_"+$BaselineName+".csv"
   $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device Name"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
@@ -452,26 +525,6 @@ function report {
           $k++
       }
   }
-<#   foreach ($device in $selectedDevicesinBaseline){
-    $DeviceUUID = $device.deviceUUID
-    $DeviceName = $device.friendlyName
-
-    #$compliance_level = "NonCompliant,NotAvailable"
-    $compliance_level = "NonCompliant"
-    $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
-    foreach ($policy in $DevicePolicies){
-
-      $PSObject = New-Object PSObject -Property @{
-        DeviceUUID = $DeviceUUID
-        DeviceName = $DeviceName
-        Policy=$policy.name
-        PolicyPath=$policy.path
-        PolicyStatus=$policy.status
-        ComplianceStatus=$policy.compliance.status
-      }
-      $devicepoliciesarray += $PSObject
-    }
-  } #>
 
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
@@ -497,10 +550,17 @@ function Show-Menu
   {
     param ([string]$Title = 'VMware Workspace ONE UEM API Menu')
        #Clear-Host
+  ############################################
+  #
+  #
+  # want to iterate through all Baselines in the OG
+  #
+  #
+  ############################################
        Write-Host "================ $Title ================"
-       Write-Host "Press '1' to Report on Non-Compliant Devices for a selected Baseline"
-       Write-Host "Press '2' to Report on All Devices for a selected Baseline"
-       #Write-Host "Press '99' to clear cached connection details"
+       Write-Host "Press '1' to Run Report on Non-Compliant Devices for a selected Baseline"
+       Write-Host "Press '2' to Run Report on All Devices for a selected Baseline"
+       Write-Host "Press '3' to Run Report on All Devices in All Baselines"
        Write-Host "Press 'Q' to quit."
         }
 
@@ -522,13 +582,15 @@ do
           alldevices
         }
     
+    '3' {
+          #Clear-Host
+          alldevicesallbaselines
+        }
+
     'Q' {
           Remove-Module WS1API
         }
 
-    #'99' {
-    #      clearcache
-    #    }
     }
     pause
   }
