@@ -69,13 +69,6 @@ Write-2Report -Path $Script:Path -Message "WS1 Baseline Report" -Level "Title"
 Function setupServerAuth {
 
   if ([string]::IsNullOrEmpty($script:Server)){
-    if ($Debug){
-      $script:Server = "https://asXXX.awmdm.com"
-      $script:Username = 'username'
-      $script:Password = 'password'
-      $script:ApiKey = 'Groups & Settings > All Settings > System > Advanced > API > Rest API'
-      $script:OGName = 'OGNAME'
-    }else{
       $script:Server = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
       $script:Username = Read-Host -Prompt 'Enter the Username'
       [string]$script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
@@ -93,7 +86,6 @@ Function setupServerAuth {
         $script:Password = ConvertFrom-SecureString $script:SecurePassword -AsPlainText
       }
     }
-  }
 
 
   #Base64 Encode AW Username and Password
@@ -127,15 +119,15 @@ Function getDevicesinBaseline {
   [string]$compliance_level
   )
 
-  if(!$max_results){
+  <#  if(!$max_results){
     $max_results = 20
   }
-  if(!$status){
+   if(!$status){
     $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
   }
   if(!$compliance_level){
     $compliance_level="Compliant,NonCompliant,Intermediate,NotAvailable"
-  }
+  } #>
 
   $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices?start_index=0&sort_asc=true&max_results=$max_results&sort_by=id&status=$status&compliance_level=$compliance_level";
   $ApiVersion = "1"
@@ -152,12 +144,12 @@ Function getDevicePolicies {
   [string]$compliance_level
   )
 
-  if(!$limit){
+  <# if(!$limit){
     $limit = 100
   }
   if(!$compliance_level){
     $compliance_level="NonCompliant,NotAvailable"
-  }
+  } #>
   $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices/$deviceUUID/policies?offset=0&sort_order=asc&limit=$limit&sort_by=compliance_level&compliance_level=$compliance_level";
   $ApiVersion = "1"
   $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
@@ -258,7 +250,8 @@ Function ChooseBaseline {
 
 function noncompliantdevices {
   #Variables
-  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  $status = "All"
+  #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
   $compliance_level = "NonCompliant,Intermediate,NotAvailable"
   
   #Connect details
@@ -267,11 +260,9 @@ function noncompliantdevices {
   OGSearch
   
   # Report on Devices and Settings for a selected Baseline
-  write-host "`n**********************************************************************************" -ForegroundColor Cyan
-  write-host "`n Report on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -ForegroundColor Cyan
-  write-host "`n**********************************************************************************" -ForegroundColor Cyan
-  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
-  
+  write-host "`n********************************************************************************************************" -ForegroundColor Yellow
+  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -Level "Header"
+  write-host "`n********************************************************************************************************" -ForegroundColor Yellow
   ##Get a list of Baselines
   $BaselineList = getBaselineList
 
@@ -285,7 +276,8 @@ function noncompliantdevices {
 
 function alldevices {
   #Variables
-  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  $status = "All"
   $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
   
   #Connect details
@@ -294,11 +286,10 @@ function alldevices {
   OGSearch
   
   # Report on Devices and Settings for a selected Baseline
-  write-host "`n**********************************************************************************" -ForegroundColor Cyan
-  write-host "`n Report on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -ForegroundColor Cyan
-  write-host "`n**********************************************************************************" -ForegroundColor Cyan
-  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
-  
+  write-host "`n********************************************************************************************************" -ForegroundColor Yellow
+  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -Level "Header"
+  write-host "`n********************************************************************************************************" -ForegroundColor Yellow
+
   ##Get a list of Baselines
   $BaselineList = getBaselineList
 
@@ -312,7 +303,8 @@ function alldevices {
 
 function alldevicesallbaselines {
   #Variables
-  $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
+  $status = "All"
+  #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
   $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
 
   #Connect details
@@ -321,11 +313,9 @@ function alldevicesallbaselines {
   OGSearch
   
   # Report on Devices and Settings for a selected Baseline
-  write-host "************************************************************************************" -ForegroundColor Cyan
-  write-host "`n Report on $compliance_level and Settings for a All Baselines in $script:OGName OG" -ForegroundColor Cyan
-  write-host "`n**********************************************************************************" -ForegroundColor Cyan
+  write-host "`n********************************************************************************************************" -ForegroundColor Yellow
   Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
-  
+  write-host "`n********************************************************************************************************" -ForegroundColor Yellow
   ##Get a list of Baselines
   $BaselineList = getBaselineList
 
@@ -378,6 +368,7 @@ function report {
   )
   $strBaselineSummaryVersions = $BaselineSummary | Select-Object -ExpandProperty summary | Select-Object -ExpandProperty versions | Select-Object -Property $versionsummaryproperties | Format-Table -AutoSize | Out-String
   Write-2Report -Path $Script:Path -Message "Version Summary" -Level "Header"
+  Write-2Report -Path $Script:Path -Message "Note: Version Summary Count does not include NotAvailable devices" -Level "Body"
   Write-2Report -Path $Script:Path -Message $strBaselineSummaryVersions -Level "Body"
 
   $compliancesummaryproperties = @(
@@ -425,19 +416,15 @@ function report {
     Write-2Report -Path $Script:Path -Message $strBaselineExclusions -Level "Body"
   }
 
-  ##Get Baseline Template Details to be searched for each setting - NOT USED
-  #$BaselineTemplateDetail = getBaselineTemplateDetail -vendortemplateUUID $vendortemplateUUID -OSVersionUUID $OSVersionUUID -securityLevelUUID $securityLevelUUID
-
-  ##Report on devices in Baseline
+  ##List devices in Baseline with selected Compliance Level
   Write-2Report -Path $Script:Path -Message "Devices with compliance status of $compliance_level in $BaselineName Baseline" -Level "Header"
   $TotalDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID
   $max_results = $TotalDevicesinBaseline.total
   $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
   $selectedDevicesinBaseline = $selectDevicesinBaseline.results
-  
   $deviceproperties = @(
     @{N="Device Name";E={$_.friendlyName}},
-    @{N="userName";E={$_.userName}},
+    @{N="UserName";E={$_.userName}},
     @{N="Install Status";E={$_.status | Select-Object -ExpandProperty status}},
     @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
     @{N="Compliance Status";E={$_.compliance | Select-Object -ExpandProperty status}},
@@ -460,24 +447,53 @@ function report {
   $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
   ##Report on devices that have the baseline installed, but are non-compliant or partially compliant (Intermediate) and report on individual setting compliance
-  #$status = "CONFIRMED_INSTALL,PENDING_REBOOT"
   $compliance_level = "NonCompliant,Intermediate,NotAvailable"
-  #$compliance_level = "NonCompliant,Intermediate"
-  Write-2Report -Path $Script:Path -Message "Settings with $compliance_level for devices with $BaselineName Baseline Installed" -Level "Header"
+  Write-2Report -Path $Script:Path -Message "Settings for devices with Compliance Stats of NotAvailable or NonCompliant (includes Intermediate) with $BaselineName Baseline Installed" -Level "Header"
+  $selectedNCDevicesinBaseline = $selectedDevicesinBaseline | Where-Object {($_.compliance.status -match "NonCompliant") -or ($_.compliance.status -match "NotAvailable")}
+  $selectedDevicesinBaselinetotal = $selectedNCDevicesinBaseline.Count
+  Write-2Report -Path $Script:Path -Message "Total number of devices with NotAvailable or NonCompliant Compliance Status = $selectedDevicesinBaselinetotal" -Level "Body"
   Write-host "Please wait this process can take quite some time...."
-  $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
-  $selectedDevicesinBaseline = $selectDevicesinBaseline.results
-  $selectedDevicesinBaselinetotal = $selectDevicesinBaseline.total
-  #Could reuse existing and filter, but a lot of processing on the endpoint. Might be better than on the API server. Need to filter status for CONFIRMED_INSTALL also
-  #$selectedDevicesinBaseline = $selectDevicesinBaseline | Where-Object {$_.compliance.status -eq "Non-Compliant" -or $_.compliance.status -eq "Intermediate"}
 
   ##Create array to store Device UUID and Name
   $devicepoliciesarray = @();
   $batch = 100;
-  $compliance_level = "NonCompliant";
+  $compliance_level = "All"
   #$compliance_level = "NonCompliant,NotAvailable"
+  $k = 1
+  $count = 1
+  #(Initialize; condition to keep the loop running; iteration/repear)
+  for ($i = 0; $i -lt $selectedNCDevicesinBaseline.Length; $i += $batch) {
+      #create end index
+      $j = $i + ($batch - 1)
+      if ($j -ge $selectedNCDevicesinBaseline.Length) {
+        $j = $selectedNCDevicesinBaseline.Length -1
+      }
+      
+      #create batch
+      $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
+      foreach ($device in $myTmpObj) {
+        $DeviceUUID = $device.deviceUUID
+        $DeviceName = $device.friendlyName
+        write-host "getDevicePolicies for $DeviceUUID"
+        $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
+        foreach ($policy in $DevicePolicies){
+          $PSObject = New-Object PSObject -Property @{
+            DeviceUUID = $DeviceUUID
+            DeviceName = $DeviceName
+            Policy=$policy.name
+            PolicyPath=$policy.path
+            PolicyStatus=$policy.status
+            ComplianceStatus=$policy.compliance.status
+          }
+          $devicepoliciesarray += $PSObject
+        }
+      }
+      write-host "Batch $k"
+      $k++
+      sleep 10
+    }
 
-  for (($i = 0),($count = 1),($k = 1); $i -lt $selectedDevicesinBaselinetotal; $i += $batch) {
+  <# for (($i = 0),($count = 1),($k = 1); $i -lt $selectedDevicesinBaselinetotal; $i += $batch) {
       if (($selectedDevicesinBaselinetotal - $i) -gt 1  ) {
           $myTmpObj = $selectedDevicesinBaseline[$i..($i + 1)]
           foreach ($device in $myTmpObj) {
@@ -498,8 +514,11 @@ function report {
             }
           }
           $count++
+          #write-host $count
           $k++
-          sleep 10
+          #write-host $k
+          #write-host $i
+          sleep 1
       }
       else {
           $myTmpObj = $selectedDevicesinBaseline[$i..($selectDevicesinBaseline.Total - 1)]
@@ -524,7 +543,7 @@ function report {
           $count++
           $k++
       }
-  }
+  } #>
 
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
@@ -550,13 +569,6 @@ function Show-Menu
   {
     param ([string]$Title = 'VMware Workspace ONE UEM API Menu')
        #Clear-Host
-  ############################################
-  #
-  #
-  # want to iterate through all Baselines in the OG
-  #
-  #
-  ############################################
        Write-Host "================ $Title ================"
        Write-Host "Press '1' to Run Report on Non-Compliant Devices for a selected Baseline"
        Write-Host "Press '2' to Run Report on All Devices for a selected Baseline"
