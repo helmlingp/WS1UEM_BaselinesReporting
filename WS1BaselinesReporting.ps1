@@ -55,7 +55,7 @@ Unblock-File "$current_path\WS1API.psm1"
 Import-Module "$current_path\WS1API.psm1" -Scope Local -ErrorAction Stop -PassThru -Force | Out-Null;
 
 #setup Report/Log file
-$DateNow = Get-Date -Format "yyyyMMdd_hhmm";
+$DateNow = Get-Date -Format "yyyyMMdd_HHmm";
 $pathfile = "$current_path\WS1BaselinesReport_$DateNow";
 $Script:logLocation = "$pathfile.log";
 $Script:Path = $logLocation;
@@ -193,26 +193,61 @@ Function OGSearch {
 
   #may be able to check if variable exists before making API call. Will make script quicker
   $OGSearch = Get-OG -Server $script:Server -Cred $script:cred -ApiKey $script:ApiKey -OrgGroup $script:OGName -Debug $Debug
+  $OGSearchOGs = $OGSearch.OrganizationGroups
+  $OGSearchTotal = $OGSearch.TotalResults
   if($Debug){ 
     write-host "OGSearch: $OGSearch"
   }
   if($Null -eq $OGSearch){
     Write-2Report -Path $Script:Path -Message "Server Authentication or Server Connection Failure`n`n`tExiting" -Level "Error"
     exit
-  }else{
-    $script:groupuuid = $OGSearch.OrganizationGroups[0].Uuid;
-    $script:OGName = $OGSearch.OrganizationGroups[0].Name
-    if($Debug){ 
-      write-host "GroupUUID: $script:groupuuid"
+  } elseif ($OGSearchTotal -eq 1){
+      $script:groupuuid = $OGSearch.OrganizationGroups[0].Uuid;
+      $script:OGName = $OGSearch.OrganizationGroups[0].Name
+      if($Debug){ 
+        write-host "GroupUUID: $script:groupuuid"
+      }
+  } elseif ($OGSearchTotal -gt 1) {
+      $ValidChoices = 0..($OGSearchOGs.Count -1)
+      $ValidChoices += 'Q'
+      Write-Host "`nMultiple OGs found. Please select an OG from the list:" -ForegroundColor Yellow
+      $Choice = ''
+      while ([string]::IsNullOrEmpty($Choice)) {
+
+        $i = 0
+        foreach ($OG in $OGSearchOGs) {
+          Write-Host ('{0}: {1}       {2}       {3}' -f $i, $OG.name, $OG.GroupId, $OG.Country)
+          $i += 1
+        }
+
+        $Choice = Read-Host -Prompt 'Type the number that corresponds to the Baseline to report on or Press "Q" to quit'
+        if ($Choice -in $ValidChoices) {
+          if ($Choice -eq 'Q'){
+            Write-2Report -Path $Script:Path -Message " Exiting Script" -Level "Footer"
+            exit
+          } else {
+            
+            $script:groupuuid = $OGSearchOGs[$Choice].Uuid
+            $script:OGName = $OGSearchOGs[$Choice].Name
+            
+          }
+        } else {
+          [console]::Beep(1000, 300)
+          Write-Warning ('    [ {0} ] is NOT a valid selection.' -f $Choice)
+          Write-Warning '    Please try again ...'
+          pause
+
+          $Choice = ''
+        }
+      }
     }
-  }
 }
 
 Function ChooseBaseline {
   #$ValidChoices = 0..($BaselineList.Count)
   $ValidChoices = 0..($BaselineList.Count -1)
   $ValidChoices += 'Q'
-  Write-Host "`nPlease select a Baseline from the list" -ForegroundColor Yellow
+  Write-Host "`nPlease select a Baseline from the list:" -ForegroundColor Yellow
   $Choice = ''
   while ([string]::IsNullOrEmpty($Choice)) {
 
@@ -248,7 +283,7 @@ Function ChooseBaseline {
   }
 }
 
-function noncompliantdevices {
+Function noncompliantdevices {
   #Variables
   $status = "All"
   #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
@@ -274,7 +309,7 @@ function noncompliantdevices {
 
 }
 
-function alldevices {
+Function alldevices {
   #Variables
   #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
   $status = "All"
@@ -301,7 +336,7 @@ function alldevices {
 
 }
 
-function alldevicesallbaselines {
+Function alldevicesallbaselines {
   #Variables
   $status = "All"
   #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
@@ -334,7 +369,7 @@ function alldevicesallbaselines {
   }
 }
 
-function report {
+Function report {
   param([string]$status,
   [string]$compliance_level
   )
@@ -449,7 +484,7 @@ function report {
   ##Report on devices that have the baseline installed, but are non-compliant or partially compliant (Intermediate) and report on individual setting compliance
   $compliance_level = "NonCompliant,Intermediate,NotAvailable"
   Write-2Report -Path $Script:Path -Message "Settings for devices with Compliance Stats of NotAvailable or NonCompliant (includes Intermediate) with $BaselineName Baseline Installed" -Level "Header"
-  $selectedNCDevicesinBaseline = $selectedDevicesinBaseline | Where-Object {($_.compliance.status -match "NonCompliant") -or ($_.compliance.status -match "NotAvailable")}
+  $selectedNCDevicesinBaseline = $selectedDevicesinBaseline | Where-Object {($_.compliance.status -match "NonCompliant") -or ($_.compliance.status -match "NotAvailable") -or ($_.compliance.status -match "Intermediate")}
   $selectedDevicesinBaselinetotal = $selectedNCDevicesinBaseline.Count
   Write-2Report -Path $Script:Path -Message "Total number of devices with NotAvailable or NonCompliant Compliance Status = $selectedDevicesinBaselinetotal" -Level "Body"
   Write-host "Please wait this process can take quite some time...."
@@ -490,7 +525,7 @@ function report {
       }
       write-host "Batch $k"
       $k++
-      sleep 10
+      sleep 1
     }
 
   <# for (($i = 0),($count = 1),($k = 1); $i -lt $selectedDevicesinBaselinetotal; $i += $batch) {
@@ -565,7 +600,7 @@ function report {
   $devicepoliciesarray = @()
 }
 
-function Show-Menu
+Function Show-Menu
   {
     param ([string]$Title = 'VMware Workspace ONE UEM API Menu')
        #Clear-Host
