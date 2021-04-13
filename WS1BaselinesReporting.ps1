@@ -485,7 +485,9 @@ Function report {
   $compliance_level = "NonCompliant,Intermediate,NotAvailable"
   Write-2Report -Path $Script:Path -Message "Settings for devices with Compliance Stats of NotAvailable or NonCompliant (includes Intermediate) with $BaselineName Baseline Installed" -Level "Header"
   $selectedNCDevicesinBaseline = $selectedDevicesinBaseline | Where-Object {($_.compliance.status -match "NonCompliant") -or ($_.compliance.status -match "NotAvailable") -or ($_.compliance.status -match "Intermediate")}
-  $selectedDevicesinBaselinetotal = $selectedNCDevicesinBaseline.Count
+  $selectedDevicesinBaselineTotal = $selectedNCDevicesinBaseline | measure
+  $selectedDevicesinBaselinetotal = $selectedDevicesinBaselineTotal.Count
+
   Write-2Report -Path $Script:Path -Message "Total number of devices with NotAvailable or NonCompliant Compliance Status = $selectedDevicesinBaselinetotal" -Level "Body"
   Write-host "Please wait this process can take quite some time...."
 
