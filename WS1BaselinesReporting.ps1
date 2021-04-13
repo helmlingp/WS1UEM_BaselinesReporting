@@ -492,20 +492,25 @@ Function report {
   ##Create array to store Device UUID and Name
   $devicepoliciesarray = @();
   $batch = 100;
-  $compliance_level = "All"
-  #$compliance_level = "NonCompliant,NotAvailable"
+  #$compliance_level = "All"
+  $compliance_level = "NonCompliant,NotAvailable"
   $k = 1
   $count = 1
-  #(Initialize; condition to keep the loop running; iteration/repear)
-  for ($i = 0; $i -lt $selectedNCDevicesinBaseline.Length; $i += $batch) {
+  #(Initialize; condition to keep the loop running; iteration/repeat)
+  for ($i = 0; $i -le $selectedDevicesinBaselinetotal; $i += $batch) {
       #create end index
       $j = $i + ($batch - 1)
-      if ($j -ge $selectedNCDevicesinBaseline.Length) {
-        $j = $selectedNCDevicesinBaseline.Length -1
+      if ($j -ge $selectedDevicesinBaselinetotal) {
+        $j = $selectedDevicesinBaselinetotal -1
       }
-      
+      write-host "Starting Batch $k"
       #create batch
-      $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
+      if ($i -eq $j) {
+        $myTmpObj = $selectedNCDevicesinBaseline[$i]
+      } else {
+        $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
+      }
+      #process batch
       foreach ($device in $myTmpObj) {
         $DeviceUUID = $device.deviceUUID
         $DeviceName = $device.friendlyName
@@ -523,62 +528,9 @@ Function report {
           $devicepoliciesarray += $PSObject
         }
       }
-      write-host "Batch $k"
       $k++
-      sleep 1
+      sleep 60
     }
-
-  <# for (($i = 0),($count = 1),($k = 1); $i -lt $selectedDevicesinBaselinetotal; $i += $batch) {
-      if (($selectedDevicesinBaselinetotal - $i) -gt 1  ) {
-          $myTmpObj = $selectedDevicesinBaseline[$i..($i + 1)]
-          foreach ($device in $myTmpObj) {
-            $DeviceUUID = $device.deviceUUID
-            $DeviceName = $device.friendlyName
-            
-            $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
-            foreach ($policy in $DevicePolicies){
-              $PSObject = New-Object PSObject -Property @{
-                DeviceUUID = $DeviceUUID
-                DeviceName = $DeviceName
-                Policy=$policy.name
-                PolicyPath=$policy.path
-                PolicyStatus=$policy.status
-                ComplianceStatus=$policy.compliance.status
-              }
-              $devicepoliciesarray += $PSObject
-            }
-          }
-          $count++
-          #write-host $count
-          $k++
-          #write-host $k
-          #write-host $i
-          sleep 1
-      }
-      else {
-          $myTmpObj = $selectedDevicesinBaseline[$i..($selectDevicesinBaseline.Total - 1)]
-          #write-host "Last Batch $k"
-          foreach ($device in $myTmpObj) {
-            $DeviceUUID = $device.deviceUUID
-            $DeviceName = $device.friendlyName
-        
-            $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
-            foreach ($policy in $DevicePolicies){
-              $PSObject = New-Object PSObject -Property @{
-                DeviceUUID = $DeviceUUID
-                DeviceName = $DeviceName
-                Policy=$policy.name
-                PolicyPath=$policy.path
-                PolicyStatus=$policy.status
-                ComplianceStatus=$policy.compliance.status
-              }
-              $devicepoliciesarray += $PSObject
-            }
-          }
-          $count++
-          $k++
-      }
-  } #>
 
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
