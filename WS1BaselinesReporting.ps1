@@ -71,7 +71,7 @@ Function setupServerAuth {
   if ([string]::IsNullOrEmpty($script:Server)){
       $script:Server = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
       $script:Username = Read-Host -Prompt 'Enter the Username'
-      [string]$script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
+      $script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
       $script:ApiKey = Read-Host -Prompt 'Enter the API Key'
       $script:OGName = Read-Host -Prompt 'Enter the Organizational Group Name'
     
