@@ -3,6 +3,7 @@
     Script to create VMware Workspace ONE Baseline Report using REST API
   .NOTES
 	  Created:   	    December, 2020
+    Updated:        November, 2023
 	  Created by:	    Phil Helmling, @philhelmling
 	  Organization:   VMware, Inc.
     Filename:       WS1BaselinesReporting.ps1
@@ -485,73 +486,78 @@ Function report {
   $compliance_level = "NonCompliant,Intermediate,NotAvailable"
   Write-2Report -Path $Script:Path -Message "Settings for devices with Compliance Stats of NotAvailable or NonCompliant (includes Intermediate) with $BaselineName Baseline Installed" -Level "Header"
   $selectedNCDevicesinBaseline = $selectedDevicesinBaseline | Where-Object {($_.compliance.status -match "NonCompliant") -or ($_.compliance.status -match "NotAvailable") -or ($_.compliance.status -match "Intermediate")}
-  $selectedDevicesinBaselineTotal = $selectedNCDevicesinBaseline | measure
+  $selectedDevicesinBaselineTotal = $selectedNCDevicesinBaseline | Measure-Object
   $selectedDevicesinBaselinetotal = $selectedDevicesinBaselineTotal.Count
 
   Write-2Report -Path $Script:Path -Message "Total number of devices with NotAvailable or NonCompliant Compliance Status = $selectedDevicesinBaselinetotal" -Level "Body"
-  Write-host "Please wait this process can take quite some time...."
+  if($selectedDevicesinBaselinetotal -lt 1){
+    #Write-host "Zero devices to report on, exiting."
+  } else {
+    Write-host "Please wait this process can take quite some time...."
 
-  ##Create array to store Device UUID and Name
-  $devicepoliciesarray = @();
-  $batch = 100;
-  #$compliance_level = "All"
-  $compliance_level = "NonCompliant,NotAvailable"
-  $k = 1
-  $count = 1
-  #(Initialize; condition to keep the loop running; iteration/repeat)
-  for ($i = 0; $i -le $selectedDevicesinBaselinetotal; $i += $batch) {
-      #create end index
-      $j = $i + ($batch - 1)
-      if ($j -ge $selectedDevicesinBaselinetotal) {
-        $j = $selectedDevicesinBaselinetotal -1
-      }
-      write-host "Starting Batch $k"
-      #create batch
-      if ($i -eq $j) {
-        $myTmpObj = $selectedNCDevicesinBaseline[$i]
-      } else {
-        $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
-      }
-      #process batch
-      foreach ($device in $myTmpObj) {
-        $DeviceUUID = $device.deviceUUID
-        $DeviceName = $device.friendlyName
-        write-host "getDevicePolicies for $DeviceUUID"
-        $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
-        foreach ($policy in $DevicePolicies){
-          $PSObject = New-Object PSObject -Property @{
-            DeviceUUID = $DeviceUUID
-            DeviceName = $DeviceName
-            Policy=$policy.name
-            PolicyPath=$policy.path
-            PolicyStatus=$policy.status
-            ComplianceStatus=$policy.compliance.status
-          }
-          $devicepoliciesarray += $PSObject
+    ##Create array to store Device UUID and Name
+    $devicepoliciesarray = @();
+    $batch = 100;
+    #$compliance_level = "All"
+    $compliance_level = "NonCompliant,NotAvailable"
+    $k = 1
+    #$count = 1
+    #(Initialize; condition to keep the loop running; iteration/repeat)
+    for ($i = 0; $i -le $selectedDevicesinBaselinetotal; $i += $batch) {
+        #create end index
+        $j = $i + ($batch - 1)
+        if ($j -ge $selectedDevicesinBaselinetotal) {
+          $j = $selectedDevicesinBaselinetotal -1
         }
+        write-host "Starting Batch $k"
+        #create batch
+        if ($i -eq $j) {
+          $myTmpObj = $selectedNCDevicesinBaseline[$i]
+        } else {
+          $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
+        }
+        #process batch
+        foreach ($device in $myTmpObj) {
+          $DeviceUUID = $device.deviceUUID
+          $DeviceName = $device.friendlyName
+          write-host "getDevicePolicies for $DeviceUUID"
+          $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
+          foreach ($policy in $DevicePolicies){
+            $PSObject = New-Object PSObject -Property @{
+              DeviceUUID = $DeviceUUID
+              DeviceName = $DeviceName
+              Policy=$policy.name
+              PolicyPath=$policy.path
+              PolicyStatus=$policy.status
+              ComplianceStatus=$policy.compliance.status
+            }
+            $devicepoliciesarray += $PSObject
+          }
+        }
+        $k++
+        sleep 60
       }
-      $k++
-      sleep 60
-    }
 
-  $deviceproperties = @(
-    @{N="Device UUID";E={$_.DeviceUUID}},
-    @{N="Device Name";E={$_.DeviceName}},
-    @{N="Policy Setting";E={$_.PolicyStatus}},
-    @{N="Compliance Status";E={$_.ComplianceStatus}},
-    @{N="Policy";E={$_.Policy}},
-    @{N="Policy Path";E={$_.PolicyPath}}
-  )
-  $strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table | Out-String
-  #$strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table -AutoSize | Out-String
-  Write-2Report -Path $Script:Path -Message $strdevicepoliciesarray -Level "Body"
+    $deviceproperties = @(
+      @{N="Device UUID";E={$_.DeviceUUID}},
+      @{N="Device Name";E={$_.DeviceName}},
+      @{N="Policy Setting";E={$_.PolicyStatus}},
+      @{N="Compliance Status";E={$_.ComplianceStatus}},
+      @{N="Policy";E={$_.Policy}},
+      @{N="Policy Path";E={$_.PolicyPath}}
+    )
+    $strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table | Out-String
+    #$strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table -AutoSize | Out-String
+    Write-2Report -Path $Script:Path -Message $strdevicepoliciesarray -Level "Body"
 
-  ##Export this list to CSV?
-  $csvLocation = $pathfile+"_Device_NonCompliantControls_"+$BaselineName+".csv"
-  $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
+    ##Export this list to CSV?
+    $csvLocation = $pathfile+"_Device_NonCompliantControls_"+$BaselineName+".csv"
+    $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
-  Write-2Report -Path $Script:Path -Message "Completed report on $compliance_level Devices and Settings for $BaselineName Baseline in $BaselineParentOG" -Level "Footer"
-  $devicepoliciesarray = @()
+    Write-2Report -Path $Script:Path -Message "Completed report on $compliance_level Devices and Settings for $BaselineName Baseline in $BaselineParentOG" -Level "Footer"
+    $devicepoliciesarray = @()
+  }
+  
 }
 
 Function Show-Menu
