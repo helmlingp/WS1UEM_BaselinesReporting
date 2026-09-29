@@ -1,0 +1,5 @@
+Device UUID,Device Name,Serial Number,OS Version,Last Seen,userName,Organization Group,Install Status,Baseline Version,Compliance Status,Reported On
+c6ea923b-57bf-4159-9ba4-2aaeb344b2bd,DESKTOP-120LONF,VMware-56 4d b0 2a 75 a5 43 5f-1a 6f c8 2b 91 fa cc cc,10.0.22000,23/3/2026 5:49:43 am,omnissans.local\philtest1,India,CONFIRMED_INSTALL,1,Intermediate,13/3/2026 2:43:27 am
+ec9a4aff-c76f-4843-9315-912a81f1892a,DESKTOP-120LONF,VMware-56 4d b0 2a 75 a5 43 5f-1a 6f c8 2b 91 fa cc cc,10.0.22000,30/3/2026 2:06:48 am,omnissans.local\philtest1,LighthouseAPJ,CONFIRMED_INSTALL,1,Intermediate,30/3/2026 1:02:29 am
+11f3c97e-8f65-4d0e-8d07-377c442dcb67,DESKTOP-120LONF,VMware-56 4d b0 2a 75 a5 43 5f-1a 6f c8 2b 91 fa cc cc,10.0.22000,23/9/2026 6:51:56 am,omnissans.local\philtest1,LighthouseAPJ,CONFIRMED_INSTALL,1,Intermediate,23/9/2026 6:28:03 am
+056a8277-0729-4975-a1df-fe1cf363c437,DESKTOP-O2445N2,VMware-56 4d ec f1 ba 9d df f1-fc 4e 11 44 05 b7 51 1c,10.0.22000,23/2/2026 3:58:03 am,omnissans.local\philtest1,ANZ,PENDING_REBOOT,1,NotAvailable,23/2/2026 3:30:41 am

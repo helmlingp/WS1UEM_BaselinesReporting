@@ -4,6 +4,7 @@
   .NOTES
 	  Created:   	    December, 2020
     Updated:        September, 2026
+    Version:        1.2.1
 	  Created by:	    Phil Helmling
 	  Organization:   Omnissa, Inc.
     Filename:       WS1BaselinesReporting.ps1
@@ -35,16 +36,19 @@
     Contains the full run transcript: baseline summary (name, description, template, version,
     parent OG, assignment count), install/version/compliance summaries, baseline customizations
     and additional policies, SmartGroup assignments/exclusions, and the device compliance listing.
-    See Sample_WS1BaselinesReport_20210224_0409.log for an example.
+    See Sample_WS1BaselinesReporting_20260929_1627.log for an example.
 
     CSV files (.csv) - written to the script directory alongside the log, one per Baseline reported on:
     - <log-basename>_Device_Compliance_Status_<BaselineName>.csv - one row per device in the Baseline,
-      with Device UUID, Device Name, UserName, Install Status, Baseline Version, Compliance Status,
-      Reported On.
-    - <log-basename>_Device_NonCompliantControls_<BaselineName>.csv - one row per non-compliant/
-      unavailable policy setting per device, with Device UUID, Device Name, Policy Setting,
-      Compliance Status, Policy, Policy Path. See "Sample_WS1BaselinesReport_20210224_0409_CIS L1.csv"
-      for an example.
+      with Device UUID, Device Name, Serial Number, OS Version, Last Seen, userName, Organization Group,
+      Install Status, Baseline Version, Compliance Status, Reported On.
+    - <log-basename>_<ComplianceLevel>_<BaselineName>.csv (e.g. NonCompliant_NotAvailable) - one row per
+      non-compliant/unavailable policy setting per device, with Device UUID, Device Name, Serial Number,
+      OS Version, Last Seen, User Name, Organization Group, Compliance Status, Policy Setting, Policy,
+      Policy Path. See "WS1BaselinesReporting_20260929_1627_NonCompliant_NotAvailable_MS25H2.csv" for an
+      example.
+
+    See CHANGELOG.md for schema changes between versions.
 
   .EXAMPLE
     Provide connection parameters on command line
@@ -422,11 +426,19 @@ Function Invoke-Report {
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
     @{N="Device Name";E={$_.friendlyName}},
+    @{N="Serial Number";E={
+      $deviceUuid = $_.DeviceUUID
+      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).serial_number}},
+    @{N="OS Version";E={
+      $deviceUuid = $_.DeviceUUID
+      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).operating_system}},
+    @{N="Last Seen";E={
+      $deviceUuid = $_.DeviceUUID
+      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).last_seen}},
     @{N="userName";E={$_.userName}},
     @{N="Organization Group";E={
       $deviceUuid = $_.DeviceUUID
-      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).organization_group_name
-    }},
+      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).organization_group_name}},
     @{N="Install Status";E={$_.status | Select-Object -ExpandProperty status}},
     @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
     @{N="Compliance Status";E={$_.compliance | Select-Object -ExpandProperty status}},
@@ -439,7 +451,7 @@ Function Invoke-Report {
     Write-2Report -Path $Script:Path -Message $strDevicesinBaseline -Level "Body"
   }
 
-  ##Export this list to CSV?
+<#   ##Export this list to CSV?
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
     @{N="Device Name";E={$_.friendlyName}},
@@ -452,7 +464,7 @@ Function Invoke-Report {
     @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
     @{N="Compliance Status";E={$_.compliance | Select-Object -ExpandProperty status}},
     @{N="Reported On";E={$_.status | Select-Object -ExpandProperty reportedOn}}
-  )
+  ) #>
   $csvLocation = $Script:pathfile+"_Device_Compliance_Status_"+$BaselineName+".csv"
   $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
@@ -494,6 +506,9 @@ Function Invoke-Report {
       foreach ($device in $myTmpObj) {
         $DeviceUUID = $device.deviceUUID
         $DeviceName = $device.friendlyName
+        $DeviceSerialNumber = ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).serial_number
+        $OSVersion = ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).operating_system
+        $DeviceLastSeen = ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).last_seen
         $DeviceUserName = $device.userName
         $DeviceOGName = ($allDevices | Where-Object { $_.Uuid -eq $DeviceUUID }).organization_group_name
         $DevicePolicies = Get-DevicePoliciesInBaseline  -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid -BaselineUuid $BaselineUUID -DeviceUuid $DeviceUUID -limit 1000 -ComplianceLevel $compliance_level
@@ -501,16 +516,18 @@ Function Invoke-Report {
           $PSObject = [PSCustomObject]@{
             DeviceUUID = $DeviceUUID
             DeviceName = $DeviceName
+            DeviceSerialNumber = $DeviceSerialNumber
+            OSVersion = $OSVersion
+            DeviceLastSeen = $DeviceLastSeen
             DeviceUserName = $DeviceUserName
             DeviceOGName = $DeviceOGName
+            ComplianceStatus=$policy.compliance.status
             Policy=$policy.name
             PolicyPath=$policy.path
             PolicyStatus=$policy.status
-            ComplianceStatus=$policy.compliance.status
           }
           $devicepoliciesarray += $PSObject
         }
-        
       }
       $k++
       if($k -eq $l) {
@@ -518,23 +535,26 @@ Function Invoke-Report {
       }
     }
 
-    $deviceproperties = @(
+    $devicepolicyproperties = @(
       @{N="Device UUID";E={$_.DeviceUUID}},
       @{N="Device Name";E={$_.DeviceName}},
+      @{N="Serial Number";E={$_.DeviceSerialNumber}},
+      @{N="OS Version";E={$_.OSVersion}},
+      @{N="Last Seen";E={$_.DeviceLastSeen}},
       @{N="User Name";E={$_.DeviceUserName}},
       @{N="Organization Group";E={$_.DeviceOGName}},
-      @{N="Policy Setting";E={$_.PolicyStatus}},
       @{N="Compliance Status";E={$_.ComplianceStatus}},
+      @{N="Policy Setting";E={$_.PolicyStatus}},
       @{N="Policy";E={$_.Policy}},
       @{N="Policy Path";E={$_.PolicyPath}}
     )
-    $strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table | Out-String
+    $strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $devicepolicyproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table | Out-String
     #$strdevicepoliciesarray = $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Format-Table -AutoSize | Out-String
     Write-2Report -Path $Script:Path -Message $strdevicepoliciesarray -Level "Body"
 
     ##Export this list to CSV?
     $csvLocation = "$Script:pathfile"+"_"+($compliance_level -replace ",","_")+"_"+$BaselineName+".csv"
-    $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
+    $devicepoliciesarray | Select-Object -Property $devicepolicyproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
     Write-2Report -Path $Script:Path -Message "Completed report on $compliance_level Devices and Settings for $BaselineName Baseline in $BaselineParentOG" -Level "Footer"
     $devicepoliciesarray = @()

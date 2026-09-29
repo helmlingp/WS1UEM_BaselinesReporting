@@ -5,6 +5,7 @@
 Author: Phil Helmling
 Updated By: helmlingp@omnissa.com
 Date updated: 9/29/2026
+Version: 1.2.1 (see [CHANGELOG.md](CHANGELOG.md) for version history)
 
 ## Purpose
 
@@ -28,12 +29,12 @@ The report provides the following sections:
 - Baseline Customisations
 - Baseline Additional Policies
 - Assignments (SmartGroups the Baseline is assigned to and excluded from)
-- Device list of devices that match the specified compliance type and baseline, including each device's Organization Group
+- Device list of devices that match the specified compliance type and baseline, including each device's Serial Number, OS Version, Last Seen, and Organization Group
 - Individual settings of all the devices for the **specified compliance type** (all devices or non-compliant devices) for a **specified baseline** (basically all the devices listed in the previous section, but all the individual settings)
 
 Sections with no data (e.g. no devices assigned/installed, no customizations, no additional policies) are reported as such instead of an empty table.
 
-### Example report - [Sample_ws1baselinereport_20260929_1352.log](Sample_ws1baselinereport_20260929_1352.log)
+### Example report - [Sample_WS1BaselinesReporting_20260929_1627.log](Sample_WS1BaselinesReporting_20260929_1627.log)
 
 ## Export
 
@@ -42,6 +43,9 @@ Two CSV files are written per Baseline reported on, alongside the log file, in t
 - `<log-basename>_Device_Compliance_Status_<BaselineName>.csv` - one row per device in the Baseline, with:
   - Device UUID
   - Device Name
+  - Serial Number
+  - OS Version
+  - Last Seen
   - userName
   - Organization Group
   - Install Status
@@ -49,19 +53,22 @@ Two CSV files are written per Baseline reported on, alongside the log file, in t
   - Compliance Status
   - Reported On
 
-- `<log-basename>_<ComplianceLevel>_<BaselineName>.csv` - one row per non-compliant/unavailable policy setting per device, with:
+- `<log-basename>_<ComplianceLevel>_<BaselineName>.csv` (e.g. `..._NonCompliant_NotAvailable_...csv`) - one row per non-compliant/unavailable policy setting per device, with:
   - Device UUID
   - Device Name
+  - Serial Number
+  - OS Version
+  - Last Seen
   - User Name
   - Organization Group
-  - Policy Setting
   - Compliance Status
+  - Policy Setting
   - Policy
   - Policy Path
 
 ### Example exports
-- [Sample_ws1baselinereport_20260929_1352_Device_Compliance_Status_MS25H2.csv](Sample_ws1baselinereport_20260929_1352_Device_Compliance_Status_MS25H2.csv)
-- [Sample_ws1baselinereport_20260929_1352_NonCompliant_NotAvailable_MS25H2.csv](Sample_ws1baselinereport_20260929_1352_NonCompliant_NotAvailable_MS25H2.csv)
+- [Sample_WS1BaselinesReporting_20260929_1627_Device_Compliance_Status_MS25H2.csv](Sample_WS1BaselinesReporting_20260929_1627_Device_Compliance_Status_MS25H2.csv)
+- [Sample_WS1BaselinesReporting_20260929_1627_NonCompliant_NotAvailable_MS25H2.csv](Sample_WS1BaselinesReporting_20260929_1627_NonCompliant_NotAvailable_MS25H2.csv)
 
 ## Requirements
 
