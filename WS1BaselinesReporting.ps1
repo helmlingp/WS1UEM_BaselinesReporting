@@ -1,42 +1,72 @@
 <#	
   .Synopsis
-    Script to create VMware Workspace ONE Baseline Report using REST API
+    Script to create Omnissa Workspace ONE Baseline Report using REST API
   .NOTES
 	  Created:   	    December, 2020
-    Updated:        November, 2023
-	  Created by:	    Phil Helmling, @philhelmling
-	  Organization:   VMware, Inc.
+    Updated:        September, 2026
+	  Created by:	    Phil Helmling
+	  Organization:   Omnissa, Inc.
     Filename:       WS1BaselinesReporting.ps1
     GitHub:         https://github.com/helmlingp/WS1UEM_BaselinesReporting
-    Requires        WS1API.psm1 in the same directory - https://github.com/helmlingp/WS1API
+    Requires        WS1API module - installed from the PowerShell Gallery (Install-Module WS1API),
+                    or imported from a local clone of https://github.com/helmlingp/WS1API when
+                    $UseLocalWS1APIModule is set to $true
   .DESCRIPTION
     Writes output to Log file and Device Policy setting status to CSV for selected Baseline.
     Log and CSV written to same directory as script.
 
-    Will ask for the following details:
-    - Workspace ONE UEM Server Name
-    - Username to authenticate
-    - Password to above user
-    - AW-Tenent-Key (API Key)
-    - Organizational Group Name (will search using beginning of name not case sensitive)
-    
+  .PARAMETER username
+    Workspace ONE UEM console username to authenticate the REST API calls with. Prompted for if not supplied.
+
+  .PARAMETER password
+    Password for the above username. Prompted for if not supplied.
+
+  .PARAMETER OGName
+    Name (or leading characters, case-insensitive) of the Organization Group to search for and report against. Prompted for if not supplied.
+
+  .PARAMETER Server
+    Workspace ONE UEM API server URL, e.g. https://as1234.awmdm.com. Prompted for if not supplied.
+
+  .PARAMETER ApiKey
+    Workspace ONE UEM REST API key (AW-Tenant-Code) for the target environment. Prompted for if not supplied.
+
+  .OUTPUTS
+    Log file (.log) - written to the script directory as ws1baselinereport_yyyyMMdd_HHmm.log.
+    Contains the full run transcript: baseline summary (name, description, template, version,
+    parent OG, assignment count), install/version/compliance summaries, baseline customizations
+    and additional policies, SmartGroup assignments/exclusions, and the device compliance listing.
+    See Sample_WS1BaselinesReport_20210224_0409.log for an example.
+
+    CSV files (.csv) - written to the script directory alongside the log, one per Baseline reported on:
+    - <log-basename>_Device_Compliance_Status_<BaselineName>.csv - one row per device in the Baseline,
+      with Device UUID, Device Name, UserName, Install Status, Baseline Version, Compliance Status,
+      Reported On.
+    - <log-basename>_Device_NonCompliantControls_<BaselineName>.csv - one row per non-compliant/
+      unavailable policy setting per device, with Device UUID, Device Name, Policy Setting,
+      Compliance Status, Policy, Policy Path. See "Sample_WS1BaselinesReport_20210224_0409_CIS L1.csv"
+      for an example.
+
   .EXAMPLE
     Provide connection parameters on command line
     powershell.exe -ep bypass -file .\WS1BaselinesReporting.ps1 -username USERNAME -password PASSWORD -Server DESTINATION_SERVER_URL -OGName DESTINATION_OG_NAME -ApiKey RESTAPIKEY
 
-    Prompt for connection parameters 
+    Prompt for connection parameters
     powershell.exe -ep bypass -file .\WS1BaselinesReporting.ps1
 
 #>
 param (
     [Parameter(Mandatory=$false)]
     [string]$username=$script:Username,
+
     [Parameter(Mandatory=$false)]
-    [string]$password=$script:password,
+    [string]$password=$script:Password,
+
     [Parameter(Mandatory=$false)]
     [string]$OGName=$script:OGName,
+
     [Parameter(Mandatory=$false)]
     [string]$Server=$script:Server,
+
     [Parameter(Mandatory=$false)]
     [string]$ApiKey=$script:ApiKey
 )
@@ -45,6 +75,7 @@ param (
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
 
 $Debug = $false
+$DebugPreference = 'SilentlyContinue'
 [string]$psver = $PSVersionTable.PSVersion
 
 $current_path = $PSScriptRoot;
@@ -52,199 +83,85 @@ if($PSScriptRoot -eq ""){
     #default path
     $current_path = "C:\Temp";
 }
-Unblock-File "$current_path\WS1API.psm1"
-Import-Module "$current_path\WS1API.psm1" -Scope Local -ErrorAction Stop -PassThru -Force | Out-Null;
+
+#Set to $true to load WS1API from disk during local testing instead of the PowerShell Gallery version.
+$UseLocalWS1APIModule = $true
+$LocalWS1APIModulePath = "~/GitHub/WS1API/WS1API.psm1"
+if ($UseLocalWS1APIModule) {
+
+    # --- Import Local Module ---
+    Unblock-File $LocalWS1APIModulePath
+    Import-Module $LocalWS1APIModulePath -Scope Local -ErrorAction Stop -PassThru -Force | Out-Null;
+    Write-Host "WS1API module loaded from local path: $LocalWS1APIModulePath"
+
+} else {
+
+    # First, check if the final goal—the module—is already installed.
+    if (-not (Get-Module -ListAvailable -Name WS1API)) {
+
+        Write-Host "WS1API module not found. Beginning installation process..."
+
+        # --- Prerequisite Check: NuGet Provider ---
+        # This check only runs if the module needs to be installed.
+        if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+            Write-Host "Prerequisite 'NuGet' is missing. Installing NuGet provider..."
+            Install-PackageProvider -Name NuGet -Force
+        }
+
+        # --- Module Installation ---
+        # Now that the prerequisite is confirmed, install the main module.
+        Write-Host "Installing WS1API module..."
+        Install-Module -Name WS1API -Force -Scope CurrentUser
+
+    }
+
+    # --- Import Module ---
+    # This line runs regardless, ensuring the module is loaded into the current session.
+    Import-Module -Name WS1API -MinimumVersion 1.1
+    Write-Host "WS1API module is ready to use."
+
+}
 
 #setup Report/Log file
-$DateNow = Get-Date -Format "yyyyMMdd_HHmm";
-$pathfile = "$current_path\WS1BaselinesReport_$DateNow";
-$Script:logLocation = "$pathfile.log";
-$Script:Path = $logLocation;
-if($Debug){
-  write-host "Path: $Path"
-  write-host "LogLocation: $LogLocation"
-}
+$logFileName = [System.IO.Path]::GetFileNameWithoutExtension($PSCommandPath)
+$Script:Path = Get-Log -logFileName $logFileName -current_path $current_path
+$Script:pathfile = Join-Path -Path (Split-Path -Path $Script:Path -Parent) -ChildPath ([System.IO.Path]::GetFileNameWithoutExtension($Script:Path))
 
 Write-2Report -Path $Script:Path -Message "WS1 Baseline Report" -Level "Title"
 
-Function setupServerAuth {
+# Get Server Authentication setup for API calls
+$auth = Get-ServerAuth -Server $Server -Username $Username -Password $Password -ApiKey $ApiKey -OGName $OGName
 
-  if ([string]::IsNullOrEmpty($script:Server)){
-      $script:Server = Read-Host -Prompt 'Enter the Workspace ONE UEM Server Name'
-      $script:Username = Read-Host -Prompt 'Enter the Username'
-      $script:SecurePassword = Read-Host -Prompt 'Enter the Password' -AsSecureString
-      $script:ApiKey = Read-Host -Prompt 'Enter the API Key'
-      $script:OGName = Read-Host -Prompt 'Enter the Organizational Group Name'
-    
-      #Convert the Password
-      if($psver -lt 7){
-        #Powershell 6 or below
-        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($script:SecurePassword)
-        $script:Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-      } else {
-        #Powershell 7 or above
-        #$script:Password = ConvertFrom-SecureString -SecureString $private:SecurePassword -AsPlainText
-        $script:Password = ConvertFrom-SecureString $script:SecurePassword -AsPlainText
-      }
-    }
+Function Get-BaselineList {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory=$true)]
+    [string]$Server,
 
+    [Parameter(Mandatory=$true)]
+    [string]$Auth,
 
-  #Base64 Encode AW Username and Password
-  $private:combined = $script:Username + ":" + $script:Password
-  $private:encoding = [System.Text.Encoding]::ASCII.GetBytes($private:combined)
-  $private:encoded = [Convert]::ToBase64String($private:encoding)
-  $script:cred = "Basic $private:encoded"
+    [Parameter(Mandatory=$true)]
+    [string]$ApiKey,
 
-  if($Debug){ 
-    Write-host `n"Server Auth" 
-    write-host "WS1 Host: $script:Server"
-    write-host "Base64 creds: $script:cred"
-    write-host "APIKey: $script:apikey"
-    write-host "OG Name: $script:OGName"
-  }
-}
-
-Function getBaselineList {
-  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines";
-  $ApiVersion = "1"
-  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
-
-  return $WebRequest
-
-}
-
-Function getDevicesinBaseline {
-  param([string]$baselineUUID,
-  [int]$max_results,
-  [string]$status,
-  [string]$compliance_level
+    [Parameter(Mandatory=$true)]
+    [string]$GroupUuid
   )
 
-  <#  if(!$max_results){
-    $max_results = 20
-  }
-   if(!$status){
-    $status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
-  }
-  if(!$compliance_level){
-    $compliance_level="Compliant,NonCompliant,Intermediate,NotAvailable"
-  } #>
-
-  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices?start_index=0&sort_asc=true&max_results=$max_results&sort_by=id&status=$status&compliance_level=$compliance_level";
+  $APIEndpoint = "$Server/api/mdm/groups/$GroupUuid/baselines";
   $ApiVersion = "1"
-  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
+  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Auth -Apikey $ApiKey
 
   return $WebRequest
 
-}
-
-Function getDevicePolicies {
-  param([string]$baselineUUID, 
-  [string]$deviceUUID,
-  [int]$limit,
-  [string]$compliance_level
-  )
-
-  <# if(!$limit){
-    $limit = 100
-  }
-  if(!$compliance_level){
-    $compliance_level="NonCompliant,NotAvailable"
-  } #>
-  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/devices/$deviceUUID/policies?offset=0&sort_order=asc&limit=$limit&sort_by=compliance_level&compliance_level=$compliance_level";
-  $ApiVersion = "1"
-  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
-
-  return $WebRequest.results
-}
-
-Function getBaselineAssignments {
-  param([string]$baselineUUID)
-  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID/assignments";
-  $ApiVersion = "2"
-  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
-
-  return $WebRequest
-
-}
-
-Function getBaselineSummary {
-  param([string]$baselineUUID)
-  $APIEndpoint = "$script:Server/api/mdm/groups/$script:groupuuid/baselines/$baselineUUID`?customizations=true&summary=true";
-  $ApiVersion = "1"
-  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
-
-  return $WebRequest
-
-}
-
-Function getBaselineTemplateDetail {
-  param([string]$vendortemplateUUID,
-  [string]$OSVersionUUID,
-  [string]$securityLevelUUID)
-  $APIEndpoint = "$script:Server/api/mdm/baselines/templates/search/$vendortemplateUUID?osVersionUUID=$OSVersionUUID&securityLevelUUID=$securityLevelUUID&policyTree=true";
-  $ApiVersion = "1"
-  $WebRequest = Invoke-AWApiCommand -Method Get -Endpoint $APIEndpoint -ApiVersion $ApiVersion -Auth $Script:cred -Apikey $Script:apikey -Debug $Debug
-
-  return $WebRequest
-
-}
-
-Function OGSearch {
-
-  #may be able to check if variable exists before making API call. Will make script quicker
-  $OGSearch = Get-OG -Server $script:Server -Cred $script:cred -ApiKey $script:ApiKey -OrgGroup $script:OGName -Debug $Debug
-  $OGSearchOGs = $OGSearch.OrganizationGroups
-  $OGSearchTotal = $OGSearch.TotalResults
-  if($Debug){ 
-    write-host "OGSearch: $OGSearch"
-  }
-  if($Null -eq $OGSearch){
-    Write-2Report -Path $Script:Path -Message "Server Authentication or Server Connection Failure`n`n`tExiting" -Level "Error"
-    exit
-  } elseif ($OGSearchTotal -eq 1){
-      $script:groupuuid = $OGSearch.OrganizationGroups[0].Uuid;
-      $script:OGName = $OGSearch.OrganizationGroups[0].Name
-      if($Debug){ 
-        write-host "GroupUUID: $script:groupuuid"
-      }
-  } elseif ($OGSearchTotal -gt 1) {
-      $ValidChoices = 0..($OGSearchOGs.Count -1)
-      $ValidChoices += 'Q'
-      Write-Host "`nMultiple OGs found. Please select an OG from the list:" -ForegroundColor Yellow
-      $Choice = ''
-      while ([string]::IsNullOrEmpty($Choice)) {
-
-        $i = 0
-        foreach ($OG in $OGSearchOGs) {
-          Write-Host ('{0}: {1}       {2}       {3}' -f $i, $OG.name, $OG.GroupId, $OG.Country)
-          $i += 1
-        }
-
-        $Choice = Read-Host -Prompt 'Type the number that corresponds to the Baseline to report on or Press "Q" to quit'
-        if ($Choice -in $ValidChoices) {
-          if ($Choice -eq 'Q'){
-            Write-2Report -Path $Script:Path -Message " Exiting Script" -Level "Footer"
-            exit
-          } else {
-            
-            $script:groupuuid = $OGSearchOGs[$Choice].Uuid
-            $script:OGName = $OGSearchOGs[$Choice].Name
-            
-          }
-        } else {
-          [console]::Beep(1000, 300)
-          Write-Warning ('    [ {0} ] is NOT a valid selection.' -f $Choice)
-          Write-Warning '    Please try again ...'
-          pause
-
-          $Choice = ''
-        }
-      }
-    }
 }
 
 Function ChooseBaseline {
+  [CmdletBinding()]
+  Param(
+    [Parameter(Mandatory=$true)]
+    [array]$BaselineList
+  )
   #$ValidChoices = 0..($BaselineList.Count)
   $ValidChoices = 0..($BaselineList.Count -1)
   $ValidChoices += 'Q'
@@ -264,14 +181,16 @@ Function ChooseBaseline {
         Write-2Report -Path $Script:Path -Message " Exiting Script" -Level "Footer"
         exit
       } else {
-        
-        $script:BaselineName = $BaselineList[$Choice].name
-        $script:BaselineUUID = $BaselineList[$Choice].baselineUUID
-        $script:BaselineDescription = $BaselineList[$Choice].description
-        $script:BaselineTemplate = $BaselineList[$Choice].templateName
-        $script:BaselineCurrentVersion = $BaselineList[$Choice].version
-        $script:BaselineParentOG = $BaselineList[$Choice].rootLocationGroupName
-        $script:BaselineAssignmentCount = $BaselineList[$Choice].assignmentCount
+
+        return [PSCustomObject]@{
+          BaselineName            = $BaselineList[$Choice].name
+          BaselineUUID            = $BaselineList[$Choice].baselineUUID
+          BaselineDescription     = $BaselineList[$Choice].description
+          BaselineTemplate        = $BaselineList[$Choice].templateName
+          BaselineCurrentVersion  = $BaselineList[$Choice].version
+          BaselineParentOG        = $BaselineList[$Choice].rootLocationGroupName
+          BaselineAssignmentCount = $BaselineList[$Choice].assignmentCount
+        }
       }
     } else {
       [console]::Beep(1000, 300)
@@ -290,23 +209,21 @@ Function noncompliantdevices {
   #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
   $compliance_level = "NonCompliant,Intermediate,NotAvailable"
   
-  #Connect details
-  setupServerAuth
   #Search OG Name to get OG ID
-  OGSearch
-  
+  $ogSearchResult = Invoke-OGSearch -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -OrgGroup $script:OGName
+
   # Report on Devices and Settings for a selected Baseline
   write-host "`n********************************************************************************************************" -ForegroundColor Yellow
   Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in $script:OGName OG" -Level "Header"
   write-host "`n********************************************************************************************************" -ForegroundColor Yellow
   ##Get a list of Baselines
-  $BaselineList = getBaselineList
+  $BaselineList = Get-BaselineList -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid
 
   #Choose a Baseline
-  ChooseBaseline
+  $SelectedBaseline = ChooseBaseline -BaselineList $BaselineList
 
   #Call Report Function
-  report -status $status -compliance_level $compliance_level
+  Invoke-Report -status $status -compliance_level $compliance_level -Baseline $SelectedBaseline
 
 }
 
@@ -316,10 +233,8 @@ Function alldevices {
   $status = "All"
   $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
   
-  #Connect details
-  setupServerAuth
   #Search OG Name to get OG ID
-  OGSearch
+  $ogSearchResult = Invoke-OGSearch -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -OrgGroup $script:OGName
   
   # Report on Devices and Settings for a selected Baseline
   write-host "`n********************************************************************************************************" -ForegroundColor Yellow
@@ -327,13 +242,13 @@ Function alldevices {
   write-host "`n********************************************************************************************************" -ForegroundColor Yellow
 
   ##Get a list of Baselines
-  $BaselineList = getBaselineList
+  $BaselineList = Get-BaselineList -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid
 
   #Choose a Baseline
-  ChooseBaseline
-  
+  $SelectedBaseline = ChooseBaseline -BaselineList $BaselineList
+
   #Call Report Function
-  report -status $status -compliance_level $compliance_level
+  Invoke-Report -status $status -compliance_level $compliance_level -Baseline $SelectedBaseline
 
 }
 
@@ -343,38 +258,58 @@ Function alldevicesallbaselines {
   #$status = "CONFIRMED_INSTALL,CONFIRMED_REMOVAL,FAILED_REMOVAL,PENDING_REBOOT,PENDING_REMOVAL"
   $compliance_level = "Compliant,NonCompliant,Intermediate,NotAvailable"
 
-  #Connect details
-  setupServerAuth
   #Search OG Name to get OG ID
-  OGSearch
-  
+  $ogSearchResult = Invoke-OGSearch -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -OrgGroup $script:OGName
+
   # Report on Devices and Settings for a selected Baseline
   write-host "`n********************************************************************************************************" -ForegroundColor Yellow
-  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for a selected Baseline in a given OG" -Level "Header"
+  Write-2Report -Path $Script:Path -Message "`nReport on $compliance_level and Settings for all Baselines in OG $script:OGName" -Level "Header"
   write-host "`n********************************************************************************************************" -ForegroundColor Yellow
   ##Get a list of Baselines
-  $BaselineList = getBaselineList
+  $BaselineList = Get-BaselineList -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid
 
   #Choose a Baseline
   foreach ($baseline in $BaselineList){
-    $BaselineName = $Baseline.name
-    $BaselineUUID = $Baseline.baselineUUID
-    $BaselineDescription = $Baseline.description
-    $BaselineTemplate = $BaselineList.templateName
-    $BaselineCurrentVersion = $Baseline.version
-    $BaselineParentOG = $Baseline.rootLocationGroupName
-    $BaselineAssignmentCount = $Baseline.assignmentCount
-    
+    $SelectedBaseline = [PSCustomObject]@{
+      BaselineName            = $Baseline.name
+      BaselineUUID            = $Baseline.baselineUUID
+      BaselineDescription     = $Baseline.description
+      BaselineTemplate        = $Baseline.templateName
+      BaselineCurrentVersion  = $Baseline.version
+      BaselineParentOG        = $Baseline.rootLocationGroupName
+      BaselineAssignmentCount = $Baseline.assignmentCount
+    }
+
     #Call Report Function
-    report -status $status -compliance_level $compliance_level
+    Invoke-Report -status $status -compliance_level $compliance_level -Baseline $SelectedBaseline
   }
 }
 
-Function report {
-  param([string]$status,
-  [string]$compliance_level
+Function Invoke-Report {
+  <#
+  .SYNOPSIS
+  Generates the compliance/settings report for a single Baseline.
+  #>
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$status,
+    
+    [Parameter(Mandatory = $true)]
+    [string]$compliance_level,
+
+    [Parameter(Mandatory = $true)]
+    [PSCustomObject]$Baseline
   )
-  
+
+  $BaselineName = $Baseline.BaselineName
+  $BaselineUUID = $Baseline.BaselineUUID
+  $BaselineDescription = $Baseline.BaselineDescription
+  $BaselineTemplate = $Baseline.BaselineTemplate
+  $BaselineCurrentVersion = $Baseline.BaselineCurrentVersion
+  $BaselineParentOG = $Baseline.BaselineParentOG
+  $BaselineAssignmentCount = $Baseline.BaselineAssignmentCount
+
   ##Get Baseline Summary
   Write-2Report -Path $Script:Path -Message "`nSummary Information for Baseline" -Level "Header"
   Write-2Report -Path $Script:Path -Message "Baseline: $BaselineName" -Level "Body"
@@ -383,8 +318,9 @@ Function report {
   Write-2Report -Path $Script:Path -Message "Current Version: $BaselineCurrentVersion" -Level "Body"
   Write-2Report -Path $Script:Path -Message "Parent OG: $BaselineParentOG" -Level "Body"
   Write-2Report -Path $Script:Path -Message "Assignment Count: $BaselineAssignmentCount" -Level "Body"
-  
-  $BaselineSummary = getBaselineSummary -baselineUUID $BaselineUUID
+
+
+  $BaselineSummary = Get-BaselineSummary -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid -baselineUUID $BaselineUUID
   #$vendortemplateUUID = $BaselineSummary.vendorTemplateUUID
   #$OSVersionUUID = $BaselineSummary.osVersionUUID
   #$securityLevelUUID = $BaselineSummary.securityLevelUUID
@@ -396,8 +332,11 @@ Function report {
   )
   $strBaselineSummaryInstalls = $BaselineSummary | Select-Object -ExpandProperty summary | Select-Object -ExpandProperty installs | Select-Object -Property $installsummaryproperties | Format-Table -AutoSize | Out-String
   Write-2Report -Path $Script:Path -Message "`nInstall Summary" -Level "Header"
-  Write-2Report -Path $Script:Path -Message $strBaselineSummaryInstalls -Level "Body"
-
+  if([string]::IsNullOrEmpty($strBaselineSummaryInstalls)){
+    Write-2Report -Path $Script:Path -Message "No Devices Assigned or Installed" -Level "Header"
+  }else{
+    Write-2Report -Path $Script:Path -Message $strBaselineSummaryInstalls -Level "Body"
+  }
   $versionsummaryproperties = @(
     @{N="Count";E={$_.count}},
     @{N="Versions";E={$_.version}}
@@ -405,7 +344,11 @@ Function report {
   $strBaselineSummaryVersions = $BaselineSummary | Select-Object -ExpandProperty summary | Select-Object -ExpandProperty versions | Select-Object -Property $versionsummaryproperties | Format-Table -AutoSize | Out-String
   Write-2Report -Path $Script:Path -Message "Version Summary" -Level "Header"
   Write-2Report -Path $Script:Path -Message "Note: Version Summary Count does not include NotAvailable devices" -Level "Body"
-  Write-2Report -Path $Script:Path -Message $strBaselineSummaryVersions -Level "Body"
+  if([string]::IsNullOrEmpty($strBaselineSummaryVersions)){
+    Write-2Report -Path $Script:Path -Message "No Devices Assigned or Installed" -Level "Header"
+  }else{
+    Write-2Report -Path $Script:Path -Message $strBaselineSummaryVersions -Level "Body"
+  }
 
   $compliancesummaryproperties = @(
     @{N="Status";E={$_.status}},
@@ -413,7 +356,11 @@ Function report {
   )
   $strBaselineSummaryCompliance = $BaselineSummary | Select-Object -ExpandProperty summary | Select-Object -ExpandProperty compliance | Select-Object -Property $compliancesummaryproperties | Format-Table -AutoSize | Out-String
   Write-2Report -Path $Script:Path -Message "Compliance Summary" -Level "Header"
-  Write-2Report -Path $Script:Path -Message $strBaselineSummaryCompliance -Level "Body"
+  if([string]::IsNullOrEmpty($strBaselineSummaryCompliance)){
+    Write-2Report -Path $Script:Path -Message "No Devices Assigned or Installed" -Level "Header"
+  }else{
+    Write-2Report -Path $Script:Path -Message $strBaselineSummaryCompliance -Level "Body"
+  }
 
   ##Get Baseline Customisations
   $customizationssummaryproperties = @(
@@ -422,8 +369,12 @@ Function report {
     @{N="Setting";E={$_.status}}
   )
   $strBaselineSummaryCustomizations = $BaselineSummary | Select-Object -ExpandProperty customizations | Select-Object -Property $customizationssummaryproperties | Sort-Object -Property "Name" | Format-Table -AutoSize | Out-String
-  Write-2Report -Path $Script:Path -Message "Baseline Customizations" -Level "Header"
-  Write-2Report -Path $Script:Path -Message $strBaselineSummaryCustomizations -Level "Body"
+  if([string]::IsNullOrEmpty($strBaselineSummaryCustomizations)){
+    Write-2Report -Path $Script:Path -Message "No Baseline Customizations found" -Level "Header"
+  }else{
+    Write-2Report -Path $Script:Path -Message "Baseline Customizations" -Level "Header"
+    Write-2Report -Path $Script:Path -Message $strBaselineSummaryCustomizations -Level "Body"
+  }
 
   ##Get Baseline Additional Policies
   $policysummaryproperties = @(
@@ -432,54 +383,77 @@ Function report {
     @{N="Setting";E={$_.status}}
   )
   $strBaselineSummaryPolicies = $BaselineSummary | Select-Object -ExpandProperty policies | Select-Object -Property $policysummaryproperties | Sort-Object -Property "Name" | Format-Table -AutoSize | Out-String
-  Write-2Report -Path $Script:Path -Message "Baseline Additional Policies" -Level "Header"
-  Write-2Report -Path $Script:Path -Message $strBaselineSummaryPolicies -Level "Body"
+  if([string]::IsNullOrEmpty($strBaselineSummaryPolicies)){
+    Write-2Report -Path $Script:Path -Message "No Baseline Additional Policies found" -Level "Header"
+  }else{
+    Write-2Report -Path $Script:Path -Message "Baseline Additional Policies" -Level "Header"
+    Write-2Report -Path $Script:Path -Message $strBaselineSummaryPolicies -Level "Body"
+  }
 
   ##Get Baseline Assignments
-  $BaselineAssignment = getBaselineAssignments -baselineUUID $BaselineUUID
+  $BaselineAssignment = Get-BaselineAssignments -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid -baselineUUID $BaselineUUID
   $strBaselineAssign = $BaselineAssignment | Select-Object -ExpandProperty assigned_smart_groups
-  if($Null -eq $strBaselineAssign){
+  if([string]::IsNullOrEmpty($strBaselineAssign)){
+    Write-2Report -Path $Script:Path -Message "No Devices Assigned" -Level "Header"
   }else{
     $strBaselineAssignments = $BaselineAssignment | Select-Object -ExpandProperty assigned_smart_groups | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
     Write-2Report -Path $Script:Path -Message "Baseline Selected is assigned to the following SmartGroups" -Level "Header"
     Write-2Report -Path $Script:Path -Message $strBaselineAssignments -Level "Body"  
   }
   $strBaselineExcl = $BaselineAssignment | Select-Object -ExpandProperty excluded_smart_groups
-  if($Null -eq $strBaselineExcl){
+  if([string]::IsNullOrEmpty($strBaselineExcl)){
+    Write-2Report -Path $Script:Path -Message "No Devices Excluded" -Level "Header"
   }else{
     $strBaselineExclusions = $BaselineAssignment | Select-Object -ExpandProperty excluded_smart_groups | Select-Object -Property @(@{N="SmartGroup";E={$_.name}}) | Sort-Object "SmartGroup" | Format-Table -AutoSize | Out-String
     Write-2Report -Path $Script:Path -Message "Baseline Selected is excluded from the following SmartGroups" -Level "Header"
     Write-2Report -Path $Script:Path -Message $strBaselineExclusions -Level "Body"
   }
 
+  ##Get all devices in the OG once, used below to look up each device's Organization Group name
+  $allDevices = Get-Devices -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid
+
   ##List devices in Baseline with selected Compliance Level
   Write-2Report -Path $Script:Path -Message "Devices with compliance status of $compliance_level in $BaselineName Baseline" -Level "Header"
-  $TotalDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID
+  $TotalDevicesinBaseline = Get-DevicesInBaseline -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid -BaselineUuid $BaselineUUID 
   $max_results = $TotalDevicesinBaseline.total
-  $selectDevicesinBaseline = getDevicesinBaseline -baselineUUID $BaselineUUID -max_results $max_results -status $status -compliance_level $compliance_level
+  $selectDevicesinBaseline = Get-DevicesInBaseline -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid -BaselineUuid $BaselineUUID -MaxResults $max_results -status $status -ComplianceLevel $compliance_level
   $selectedDevicesinBaseline = $selectDevicesinBaseline.results
+
   $deviceproperties = @(
+    @{N="Device UUID";E={$_.DeviceUUID}},
     @{N="Device Name";E={$_.friendlyName}},
-    @{N="UserName";E={$_.userName}},
+    @{N="userName";E={$_.userName}},
+    @{N="Organization Group";E={
+      $deviceUuid = $_.DeviceUUID
+      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).organization_group_name
+    }},
     @{N="Install Status";E={$_.status | Select-Object -ExpandProperty status}},
     @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
     @{N="Compliance Status";E={$_.compliance | Select-Object -ExpandProperty status}},
     @{N="Reported On";E={$_.status | Select-Object -ExpandProperty reportedOn}}
   )
-  $strDevicesinBaseline = $selectedDevicesinBaseline  | Select-Object -Property $deviceproperties | Sort-Object "Device Name" | Format-Table -AutoSize | Out-String
-  Write-2Report -Path $Script:Path -Message $strDevicesinBaseline -Level "Body"
+  $strDevicesinBaseline = $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object "Device Name" | Format-Table -AutoSize | Out-String
+  if([string]::IsNullOrEmpty($strDevicesinBaseline)){
+    Write-2Report -Path $Script:Path -Message "No Devices Assigned or Installed" -Level "Header"
+  }else{
+    Write-2Report -Path $Script:Path -Message $strDevicesinBaseline -Level "Body"
+  }
 
   ##Export this list to CSV?
   $deviceproperties = @(
     @{N="Device UUID";E={$_.DeviceUUID}},
     @{N="Device Name";E={$_.friendlyName}},
     @{N="userName";E={$_.userName}},
+    @{N="Organization Group";E={
+      $deviceUuid = $_.DeviceUUID
+      ($allDevices | Where-Object { $_.Uuid -eq $deviceUuid }).organization_group_name
+    }},
     @{N="Install Status";E={$_.status | Select-Object -ExpandProperty status}},
     @{N="Baseline Version";E={$_.status | Select-Object -ExpandProperty version}},
     @{N="Compliance Status";E={$_.compliance | Select-Object -ExpandProperty status}},
     @{N="Reported On";E={$_.status | Select-Object -ExpandProperty reportedOn}}
   )
-  $csvLocation = $pathfile+"_Device_Compliance_Status_"+$BaselineName+".csv"
+  $csvLocation = $Script:pathfile+"_Device_Compliance_Status_"+$BaselineName+".csv"
   $selectedDevicesinBaseline | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
   ##Report on devices that have the baseline installed, but are non-compliant or partially compliant (Intermediate) and report on individual setting compliance
@@ -493,8 +467,7 @@ Function report {
   if($selectedDevicesinBaselinetotal -lt 1){
     #Write-host "Zero devices to report on, exiting."
   } else {
-    Write-host "Please wait this process can take quite some time...."
-
+    Write-Host "Please wait this process can take quite some time...."
     ##Create array to store Device UUID and Name
     $devicepoliciesarray = @();
     $batch = 100;
@@ -502,45 +475,54 @@ Function report {
     $compliance_level = "NonCompliant,NotAvailable"
     $k = 1
     #$count = 1
+    $l = [Math]::Ceiling($selectedDevicesinBaselinetotal / $batch)
     #(Initialize; condition to keep the loop running; iteration/repeat)
     for ($i = 0; $i -le $selectedDevicesinBaselinetotal; $i += $batch) {
-        #create end index
-        $j = $i + ($batch - 1)
-        if ($j -ge $selectedDevicesinBaselinetotal) {
-          $j = $selectedDevicesinBaselinetotal -1
-        }
-        write-host "Starting Batch $k"
-        #create batch
-        if ($i -eq $j) {
-          $myTmpObj = $selectedNCDevicesinBaseline[$i]
-        } else {
-          $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
-        }
-        #process batch
-        foreach ($device in $myTmpObj) {
-          $DeviceUUID = $device.deviceUUID
-          $DeviceName = $device.friendlyName
-          write-host "getDevicePolicies for $DeviceUUID"
-          $DevicePolicies = getDevicePolicies -baselineUUID $BaselineUUID -deviceUUID $DeviceUUID -limit 1000 -compliance_level $compliance_level
-          foreach ($policy in $DevicePolicies){
-            $PSObject = New-Object PSObject -Property @{
-              DeviceUUID = $DeviceUUID
-              DeviceName = $DeviceName
-              Policy=$policy.name
-              PolicyPath=$policy.path
-              PolicyStatus=$policy.status
-              ComplianceStatus=$policy.compliance.status
-            }
-            $devicepoliciesarray += $PSObject
-          }
-        }
-        $k++
-        sleep 60
+      #create end index
+      $j = $i + ($batch - 1)
+      if ($j -ge $selectedDevicesinBaselinetotal) {
+        $j = $selectedDevicesinBaselinetotal -1
       }
+      Write-Host "Starting Batch $k of $l"
+      #create batch
+      if ($i -eq $j) {
+        $myTmpObj = $selectedNCDevicesinBaseline[$i]
+      } else {
+        $myTmpObj = $selectedNCDevicesinBaseline[$i..$j]
+      }
+      #process batch
+      foreach ($device in $myTmpObj) {
+        $DeviceUUID = $device.deviceUUID
+        $DeviceName = $device.friendlyName
+        $DeviceUserName = $device.userName
+        $DeviceOGName = ($allDevices | Where-Object { $_.Uuid -eq $DeviceUUID }).organization_group_name
+        $DevicePolicies = Get-DevicePoliciesInBaseline  -Server $auth.Server -Auth $auth.Cred -ApiKey $auth.ApiKey -GroupUuid $ogSearchResult.uuid -BaselineUuid $BaselineUUID -DeviceUuid $DeviceUUID -limit 1000 -ComplianceLevel $compliance_level
+        foreach ($policy in $DevicePolicies){
+          $PSObject = [PSCustomObject]@{
+            DeviceUUID = $DeviceUUID
+            DeviceName = $DeviceName
+            DeviceUserName = $DeviceUserName
+            DeviceOGName = $DeviceOGName
+            Policy=$policy.name
+            PolicyPath=$policy.path
+            PolicyStatus=$policy.status
+            ComplianceStatus=$policy.compliance.status
+          }
+          $devicepoliciesarray += $PSObject
+        }
+        
+      }
+      $k++
+      if($k -eq $l) {
+        Start-Sleep -Seconds 60
+      }
+    }
 
     $deviceproperties = @(
       @{N="Device UUID";E={$_.DeviceUUID}},
       @{N="Device Name";E={$_.DeviceName}},
+      @{N="User Name";E={$_.DeviceUserName}},
+      @{N="Organization Group";E={$_.DeviceOGName}},
       @{N="Policy Setting";E={$_.PolicyStatus}},
       @{N="Compliance Status";E={$_.ComplianceStatus}},
       @{N="Policy";E={$_.Policy}},
@@ -551,7 +533,7 @@ Function report {
     Write-2Report -Path $Script:Path -Message $strdevicepoliciesarray -Level "Body"
 
     ##Export this list to CSV?
-    $csvLocation = $pathfile+"_Device_NonCompliantControls_"+$BaselineName+".csv"
+    $csvLocation = "$Script:pathfile"+"_"+($compliance_level -replace ",","_")+"_"+$BaselineName+".csv"
     $devicepoliciesarray | Select-Object -Property $deviceproperties | Sort-Object -Property @{Expression = {"Device UUID"}; Ascending = $false} | Export-CSV $csvLocation -noTypeInformation
 
     Write-2Report -Path $Script:Path -Message "Completed report on $compliance_level Devices and Settings for $BaselineName Baseline in $BaselineParentOG" -Level "Footer"

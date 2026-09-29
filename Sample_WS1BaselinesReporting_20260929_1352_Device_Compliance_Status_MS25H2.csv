@@ -1,0 +1,5 @@
+"Device UUID","Device Name","userName","Organization Group","Install Status","Baseline Version","Compliance Status","Reported On"
+"c6ea923b-57bf-4159-9ba4-2aaeb344b2bd","DESKTOP-120LONF","omnissans.local\philtest1","NCEE","CONFIRMED_INSTALL","1","Intermediate","13/3/2026 2:43:27 am"
+"ec9a4aff-c76f-4843-9315-912a81f1892a","DESKTOP-120LONF","omnissans.local\philtest1","LighthouseAPJ","CONFIRMED_INSTALL","1","Intermediate","30/3/2026 1:02:29 am"
+"11f3c97e-8f65-4d0e-8d07-377c442dcb67","DESKTOP-120LONF","omnissans.local\philtest1","LighthouseAPJ","CONFIRMED_INSTALL","1","Intermediate","23/9/2026 6:28:03 am"
+"056a8277-0729-4975-a1df-fe1cf363c437","DESKTOP-O2445N2","omnissans.local\philtest1","CIS-3M","PENDING_REBOOT","1","NotAvailable","23/2/2026 3:30:41 am"

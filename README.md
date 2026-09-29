@@ -4,12 +4,18 @@
 
 Author: Phil Helmling
 Updated By: helmlingp@omnissa.com
-Date updated: 8/16/2022
+Date updated: 9/29/2026
 
 ## Purpose
 
 This script will create a report and also export the data to CSV of a chosen Baseline within a chosen OG using REST API.
 Choose to report on non-compliant devices, those with a status of `NonCompliant`, `Intermediate`, or `NotAvailable`, or all devices, those that are non-compliant as well as `Compliant`.
+
+## Requires
+
+The [WS1API](https://github.com/helmlingp/WS1API) PowerShell module, either:
+- installed from the PowerShell Gallery (`Install-Module WS1API`), or
+- imported from a local clone of the WS1API repo, by setting `$UseLocalWS1APIModule = $true` and `$LocalWS1APIModulePath` near the top of the script (useful for local development/testing).
 
 ## Report
 
@@ -21,23 +27,41 @@ The report provides the following sections:
 - Compliance Summary
 - Baseline Customisations
 - Baseline Additional Policies
-- Assignments
-- Device list of devices that match the specified compliance type and baseline
+- Assignments (SmartGroups the Baseline is assigned to and excluded from)
+- Device list of devices that match the specified compliance type and baseline, including each device's Organization Group
 - Individual settings of all the devices for the **specified compliance type** (all devices or non-compliant devices) for a **specified baseline** (basically all the devices listed in the previous section, but all the individual settings)
 
-### Example report - [Sample_WS1BaselinesReport_20210223_0409.log](Sample_WS1BaselinesReport_20210224_0409.log)
+Sections with no data (e.g. no devices assigned/installed, no customizations, no additional policies) are reported as such instead of an empty table.
+
+### Example report - [Sample_ws1baselinereport_20260929_1352.log](Sample_ws1baselinereport_20260929_1352.log)
 
 ## Export
 
-The export is essentially the individual settings of all the devices for the specified compliance type (all devices or non-compliant devices) for a specified baseline in tabular format. The following fields are provided:
-- Device UUID
-- Device Name
-- Policy Setting
-- Compliance Status
-- Policy
-- Policy Path
+Two CSV files are written per Baseline reported on, alongside the log file, in tabular format:
 
-### Example export - [Sample_WS1BaselinesReport_20210224_0409_CIS%20L1](Sample_WS1BaselinesReport_20210224_0409_CIS%20L1.csv)
+- `<log-basename>_Device_Compliance_Status_<BaselineName>.csv` - one row per device in the Baseline, with:
+  - Device UUID
+  - Device Name
+  - userName
+  - Organization Group
+  - Install Status
+  - Baseline Version
+  - Compliance Status
+  - Reported On
+
+- `<log-basename>_<ComplianceLevel>_<BaselineName>.csv` - one row per non-compliant/unavailable policy setting per device, with:
+  - Device UUID
+  - Device Name
+  - User Name
+  - Organization Group
+  - Policy Setting
+  - Compliance Status
+  - Policy
+  - Policy Path
+
+### Example exports
+- [Sample_ws1baselinereport_20260929_1352_Device_Compliance_Status_MS25H2.csv](Sample_ws1baselinereport_20260929_1352_Device_Compliance_Status_MS25H2.csv)
+- [Sample_ws1baselinereport_20260929_1352_NonCompliant_NotAvailable_MS25H2.csv](Sample_ws1baselinereport_20260929_1352_NonCompliant_NotAvailable_MS25H2.csv)
 
 ## Requirements
 
